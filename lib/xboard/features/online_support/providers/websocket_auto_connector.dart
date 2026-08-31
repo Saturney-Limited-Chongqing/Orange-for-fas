@@ -1,6 +1,7 @@
 import 'package:fl_clash/xboard/core/core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_clash/xboard/features/online_support/providers/chat_provider.dart';
+import 'package:fl_clash/xboard/features/online_support/services/service_config.dart';
 import 'package:fl_clash/xboard/features/auth/auth.dart';
 
 // 初始化文件级日志器
@@ -19,7 +20,15 @@ final _logger = FileLogger('websocket_auto_connector.dart');
 /// 3. 登出(true → false)时自动断开 WebSocket
 /// 4. 初始化时检查当前认证状态,如果已登录则立即连接
 final webSocketAutoConnectorProvider = Provider<void>((ref) {
-  final wsService = ref.watch(wsServiceProvider);
+  if (CustomerSupportServiceConfig.wsBaseUrl == null) {
+    _logger.info(
+      'WebSocketAutoConnector',
+      'WebSocket 配置不存在,跳过自动连接',
+    );
+    return;
+  }
+
+  final wsService = ref.read(wsServiceProvider);
 
   // 监听认证状态变化
   ref.listen<UserAuthState>(

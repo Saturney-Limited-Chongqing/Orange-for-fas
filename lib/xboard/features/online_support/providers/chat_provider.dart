@@ -130,11 +130,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
       read: true,
       createdAt: DateTime.now().toIso8601String(),
     );
-    
+
     // 清除错误状态并立即显示用户消息
     state = state.copyWith(
       messages: [localMessage, ...state.messages],
-      isError: false, 
+      isError: false,
       errorMessage: '',
     );
 
@@ -169,23 +169,25 @@ class ChatNotifier extends StateNotifier<ChatState> {
       id: DateTime.now().millisecondsSinceEpoch,
       content: content.trim(),
       senderType: SenderType.user,
-      messageType: attachments.any((a) => a.isImage) ? MessageType.image : MessageType.file,
+      messageType: attachments.any((a) => a.isImage)
+          ? MessageType.image
+          : MessageType.file,
       attachments: attachments,
       read: true,
       createdAt: DateTime.now().toIso8601String(),
     );
-    
+
     // 清除错误状态并立即显示用户消息
     state = state.copyWith(
       messages: [localMessage, ...state.messages],
-      isError: false, 
+      isError: false,
       errorMessage: '',
     );
 
     // 异步发送消息到服务器
     try {
       final attachmentIds = attachments.map((a) => a.id).toList();
-      
+
       // 优先使用WebSocket发送
       if (_wsService.isConnected) {
         _wsService.sendMessageWithAttachments(content.trim(), attachmentIds);
@@ -196,7 +198,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           attachmentIds: attachmentIds,
         );
       }
-      
+
       // 发送成功，清除发送状态
       state = state.copyWith(isSending: false);
     } catch (e) {
@@ -217,7 +219,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         offset: 0,
         limit: _pageSize,
       );
-      
+
       final messages = response.items;
       _currentOffset = messages.length;
 
@@ -247,7 +249,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         offset: _currentOffset,
         limit: _pageSize,
       );
-      
+
       final moreMessages = response.items;
       _currentOffset += moreMessages.length;
 
@@ -311,7 +313,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             .where((id) => id != null)
             .cast<int>()
             .toList();
-        
+
         if (messageIntIds.isNotEmpty) {
           _logger.debug('通过WebSocket标记消息已读: $messageIntIds');
           _wsService.markMessagesAsRead(messageIntIds);
@@ -380,18 +382,22 @@ class ChatNotifier extends StateNotifier<ChatState> {
     _wsMessageSubscription = _wsService.messageStream.listen(
       (wsMessage) {
         // 只处理新消息类型
-        if (wsMessage.type == WebSocketMessageType.newMessage && wsMessage.data != null) {
+        if (wsMessage.type == WebSocketMessageType.newMessage &&
+            wsMessage.data != null) {
           final wsData = wsMessage.data as Map<String, dynamic>;
-          
+
           // 从正确的路径获取消息数据
           final messageData = wsData['message'] as Map<String, dynamic>?;
           if (messageData != null) {
-            final messageId = messageData['id'] as int? ?? DateTime.now().millisecondsSinceEpoch;
-            
-            _logger.debug('收到新消息: ID=$messageId, 内容=${messageData['content']}', null);
-            
+            final messageId = messageData['id'] as int? ??
+                DateTime.now().millisecondsSinceEpoch;
+
+            _logger.debug(
+                '收到新消息: ID=$messageId, 内容=${messageData['content']}', null);
+
             // 检查是否已存在相同ID的消息，避免重复
-            final existingMessage = state.messages.any((msg) => msg.id == messageId);
+            final existingMessage =
+                state.messages.any((msg) => msg.id == messageId);
             if (!existingMessage) {
               // 添加新消息到状态中
               final newMessage = ChatMessage(
@@ -399,7 +405,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 content: messageData['content']?.toString() ?? '',
                 senderType: SenderType.agent,
                 read: false,
-                createdAt: messageData['created_at']?.toString() ?? DateTime.now().toIso8601String(),
+                createdAt: messageData['created_at']?.toString() ??
+                    DateTime.now().toIso8601String(),
               );
 
               state = state.copyWith(
@@ -470,7 +477,13 @@ final wsServiceProvider = Provider<CustomerSupportWebSocketService>((ref) {
 /// WebSocket 连接状态 Provider
 /// 提供实时的 WebSocket 连接状态,供 UI 层订阅
 /// 先发送当前状态,然后监听后续变化,确保订阅时能立即获取状态
-final wsConnectionStatusProvider = StreamProvider<WebSocketStatus>((ref) async* {
+final wsConnectionStatusProvider =
+    StreamProvider<WebSocketStatus>((ref) async* {
+  if (CustomerSupportServiceConfig.wsBaseUrl == null) {
+    yield WebSocketStatus.disconnected;
+    return;
+  }
+
   final wsService = ref.watch(wsServiceProvider);
 
   // 先 yield 当前状态
@@ -485,7 +498,7 @@ final wsConnectionStatusProvider = StreamProvider<WebSocketStatus>((ref) async* 
 final chatProvider = StateNotifierProvider<ChatNotifier, ChatState>((ref) {
   final apiService = ref.watch(apiServiceProvider);
   final wsService = ref.watch(wsServiceProvider);
-  
+
   return ChatNotifier(
     apiService: apiService,
     wsService: wsService,

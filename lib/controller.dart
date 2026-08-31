@@ -12,6 +12,7 @@ import 'package:fl_clash/plugins/app.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/dialog.dart';
+import 'package:fl_clash/xboard/config/utils/config_file_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart';
@@ -656,6 +657,12 @@ class AppController {
     if (_ref.read(appSettingProvider).disclaimerAccepted) {
       return;
     }
+    if (ConfigFileLoader.readEnvironmentValue('TEST_ENDPOINT') != null) {
+      _ref.read(appSettingProvider.notifier).updateState(
+            (state) => state.copyWith(disclaimerAccepted: true),
+          );
+      return;
+    }
     final isDisclaimerAccepted = await showDisclaimer();
     if (!isDisclaimerAccepted) {
       await handleExit();
@@ -667,13 +674,15 @@ class AppController {
     try {
       // 先删除所有现有的URL订阅（非文件类型的订阅）
       final profiles = globalState.config.profiles;
-      final urlProfiles = profiles.where((profile) => profile.type == ProfileType.url).toList();
-      
+      final urlProfiles =
+          profiles.where((profile) => profile.type == ProfileType.url).toList();
+
       for (final profile in urlProfiles) {
-        commonPrint.log('Removing existing URL profile: ${profile.label ?? profile.id}');
+        commonPrint.log(
+            'Removing existing URL profile: ${profile.label ?? profile.id}');
         deleteProfile(profile.id);
       }
-      
+
       // 然后添加新的订阅
       final profile = await Profile.normal(
         url: url,

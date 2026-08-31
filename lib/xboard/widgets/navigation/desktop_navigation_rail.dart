@@ -1,5 +1,6 @@
 import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/xboard/features/online_support/providers/chat_provider.dart';
+import 'package:fl_clash/xboard/features/online_support/services/service_config.dart';
 import 'package:fl_clash/xboard/features/shared/shared.dart';
 import 'package:fl_clash/xboard/features/invite/widgets/user_menu_widget.dart';
 import 'package:flutter/material.dart';
@@ -18,7 +19,11 @@ class DesktopNavigationRail extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final chatState = ref.watch(chatProvider);
+    final chatState = !CustomerSupportServiceConfig.isCrisp &&
+            CustomerSupportServiceConfig.apiBaseUrl != null &&
+            CustomerSupportServiceConfig.wsBaseUrl != null
+        ? ref.watch(chatProvider)
+        : const ChatState();
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
 
@@ -48,12 +53,12 @@ class DesktopNavigationRail extends ConsumerWidget {
       child: Column(
         children: [
           const SizedBox(height: 24),
-          
+
           // 导航项
           Expanded(
             child: _buildNavigationItems(context, colorScheme, chatState),
           ),
-          
+
           // 底部功能区
           _buildBottomActions(colorScheme),
         ],
@@ -85,7 +90,7 @@ class DesktopNavigationRail extends ConsumerWidget {
     ChatState chatState,
   ) {
     final appLocalizations = AppLocalizations.of(context);
-    
+
     return NavigationRail(
       backgroundColor: Colors.transparent,
       selectedIndex: selectedIndex,
@@ -166,4 +171,3 @@ class DesktopNavigationRail extends ConsumerWidget {
     );
   }
 }
-

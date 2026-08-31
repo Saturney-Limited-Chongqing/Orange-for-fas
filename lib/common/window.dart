@@ -19,20 +19,22 @@ class Window {
       protocol.register("flclash");
     }
     await windowManager.ensureInitialized();
-    
+
     // 获取主屏幕信息
     final primaryDisplay = await screenRetriever.getPrimaryDisplay();
     final screenSize = primaryDisplay.size;
-    
+
     // 计算合适的窗口尺寸
     // 1. 如果配置的尺寸小于屏幕的60%，使用配置的尺寸
     // 2. 如果配置的尺寸过大，则使用屏幕的60%（留出足够空间给任务栏和其他窗口）
     final maxWidth = screenSize.width * 0.55;
     final maxHeight = screenSize.height * 0.55;
-    
-    final windowWidth = props.width > maxWidth ? maxWidth : props.width.toDouble();
-    final windowHeight = props.height > maxHeight ? maxHeight : props.height.toDouble();
-    
+
+    final windowWidth =
+        props.width > maxWidth ? maxWidth : props.width.toDouble();
+    final windowHeight =
+        props.height > maxHeight ? maxHeight : props.height.toDouble();
+
     WindowOptions windowOptions = WindowOptions(
       size: Size(windowWidth, windowHeight),
       minimumSize: Size(windowWidth, windowHeight), // 固定最小尺寸等于窗口尺寸

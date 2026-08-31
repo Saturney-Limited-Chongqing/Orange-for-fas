@@ -28,7 +28,7 @@ class AboutView extends ConsumerWidget {
   _checkUpdate(BuildContext context, WidgetRef ref) async {
     final commonScaffoldState = context.commonScaffoldState;
     if (commonScaffoldState?.mounted != true) return;
-    
+
     try {
       // 显示加载状态并执行更新检查
       await commonScaffoldState?.loadingRun<void>(
@@ -38,7 +38,7 @@ class AboutView extends ConsumerWidget {
         },
         title: appLocalizations.checkUpdate,
       );
-      
+
       // 检查更新结果
       final updateState = ref.read(updateCheckProvider);
       if (updateState.hasUpdate) {
@@ -55,16 +55,16 @@ class AboutView extends ConsumerWidget {
           String errorMessage = '检查更新失败';
           if (updateState.error!.contains('530')) {
             errorMessage = '更新服务暂时不可用，请稍后重试';
-          } else if (updateState.error!.contains('SSL') || 
-                     updateState.error!.contains('HandshakeException') ||
-                     updateState.error!.contains('TLSV1_ALERT_INTERNAL_ERROR')) {
+          } else if (updateState.error!.contains('SSL') ||
+              updateState.error!.contains('HandshakeException') ||
+              updateState.error!.contains('TLSV1_ALERT_INTERNAL_ERROR')) {
             errorMessage = 'SSL连接失败，请检查网络或稍后重试';
           } else if (updateState.error!.contains('timeout')) {
             errorMessage = '网络连接超时，请检查网络连接';
           } else if (updateState.error!.contains('connection')) {
             errorMessage = '无法连接到更新服务器';
           }
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(errorMessage),
@@ -133,7 +133,7 @@ class AboutView extends ConsumerWidget {
           title: Text(appLocalizations.core),
           onTap: () {
             globalState.openUrl(
-              "https://github.com/chen08209/Clash.Meta/tree/FlClash",
+              "https://github.com/Saturney-Limited-Chongqing/clashmeta/tree/FlClash",
             );
           },
           trailing: const Icon(Icons.launch),

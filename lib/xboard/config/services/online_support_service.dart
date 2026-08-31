@@ -1,7 +1,7 @@
 import '../models/online_support_info.dart';
 
 /// 在线客服服务
-/// 
+///
 /// 负责在线客服配置的访问和管理
 class OnlineSupportService {
   final List<OnlineSupportInfo> _configs;
@@ -30,9 +30,30 @@ class OnlineSupportService {
     return config?.wsBaseUrl;
   }
 
+  /// 是否使用 Crisp 客服
+  bool get isCrisp {
+    return getFirstAvailableConfig()?.type == 'crisp';
+  }
+
+  /// 获取 Crisp Website ID
+  String? getCrispWebsiteId() {
+    final config = getFirstAvailableConfig();
+    if (config?.type != 'crisp') {
+      return null;
+    }
+    return config?.websiteId;
+  }
+
   /// 检查是否有可用的配置
   bool hasAvailableConfig() {
-    return _configs.isNotEmpty;
+    final config = getFirstAvailableConfig();
+    if (config == null) {
+      return false;
+    }
+    if (config.type == 'crisp') {
+      return config.websiteId?.isNotEmpty == true;
+    }
+    return config.apiBaseUrl.isNotEmpty || config.wsBaseUrl.isNotEmpty;
   }
 
   /// 获取配置统计信息
@@ -44,14 +65,17 @@ class OnlineSupportService {
     };
 
     // 协议分布统计
-    final httpCount = _configs.where((config) => 
-        config.apiBaseUrl.startsWith('http://')).length;
-    final httpsCount = _configs.where((config) => 
-        config.apiBaseUrl.startsWith('https://')).length;
-    final wsCount = _configs.where((config) => 
-        config.wsBaseUrl.startsWith('ws://')).length;
-    final wssCount = _configs.where((config) => 
-        config.wsBaseUrl.startsWith('wss://')).length;
+    final httpCount = _configs
+        .where((config) => config.apiBaseUrl.startsWith('http://'))
+        .length;
+    final httpsCount = _configs
+        .where((config) => config.apiBaseUrl.startsWith('https://'))
+        .length;
+    final wsCount =
+        _configs.where((config) => config.wsBaseUrl.startsWith('ws://')).length;
+    final wssCount = _configs
+        .where((config) => config.wsBaseUrl.startsWith('wss://'))
+        .length;
 
     stats['protocolDistribution'] = {
       'http': httpCount,
@@ -81,7 +105,7 @@ class OnlineSupportService {
   @override
   String toString() {
     return 'OnlineSupportService(configs: ${_configs.length}, '
-           'hasApiConfig: ${getApiBaseUrl() != null}, '
-           'hasWebSocketConfig: ${getWebSocketBaseUrl() != null})';
+        'hasApiConfig: ${getApiBaseUrl() != null}, '
+        'hasWebSocketConfig: ${getWebSocketBaseUrl() != null})';
   }
 }

@@ -216,8 +216,22 @@ class GlobalState {
     required Widget child,
     bool dismissible = true,
   }) async {
+    BuildContext? context;
+    for (var attempt = 0; attempt < 20; attempt++) {
+      context =
+          navigatorKey.currentState?.context ?? navigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        break;
+      }
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+
+    if (context == null || !context.mounted) {
+      return null;
+    }
+
     return await showModal<T>(
-      context: navigatorKey.currentState!.context,
+      context: context,
       configuration: FadeScaleTransitionConfiguration(
         barrierColor: Colors.black38,
         barrierDismissible: dismissible,

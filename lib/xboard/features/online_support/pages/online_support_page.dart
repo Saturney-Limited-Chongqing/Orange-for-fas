@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/xboard/features/online_support/models/message_model.dart';
 import 'package:fl_clash/xboard/features/online_support/providers/chat_provider.dart';
+import 'package:fl_clash/xboard/features/online_support/services/service_config.dart';
 import 'package:fl_clash/xboard/features/online_support/services/websocket_service.dart';
 import 'package:fl_clash/xboard/features/online_support/widgets/chat_message_widget.dart';
 import 'package:fl_clash/xboard/features/online_support/widgets/image_picker_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OnlineSupportPage extends ConsumerStatefulWidget {
   const OnlineSupportPage({super.key});
@@ -60,6 +62,14 @@ class _OnlineSupportPageState extends ConsumerState<OnlineSupportPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (CustomerSupportServiceConfig.isCrisp) {
+      return const _CrispSupportPage();
+    }
+    if (CustomerSupportServiceConfig.apiBaseUrl == null ||
+        CustomerSupportServiceConfig.wsBaseUrl == null) {
+      return const _SupportNotConfiguredPage();
+    }
+
     final chatState = ref.watch(chatProvider);
     final chatNotifier = ref.watch(chatProvider.notifier);
 
@@ -129,7 +139,6 @@ class _OnlineSupportPageState extends ConsumerState<OnlineSupportPage> {
       );
     }
 
-
     // 标记消息为已读
     void markMessagesAsRead() {
       final unreadMessageIds = chatState.messages
@@ -171,36 +180,37 @@ class _OnlineSupportPageState extends ConsumerState<OnlineSupportPage> {
 
     // 页面构建
     // 根据操作系统平台判断设备类型
-    final isDesktop = Platform.isLinux || Platform.isWindows || Platform.isMacOS;
-    
+    final isDesktop =
+        Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+
     final scaffold = Scaffold(
-      appBar: isDesktop 
-        ? null  // 桌面端不显示 AppBar，由 Shell 提供导航
-        : AppBar(
-            title: Column(
-              children: [
-                Text(appLocalizations.onlineSupportTitle),
-                // 连接状态显示在标题下方
-                Text(
-                  getConnectionStatusText(),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: getConnectionStatusColor(),
+      appBar: isDesktop
+          ? null // 桌面端不显示 AppBar，由 Shell 提供导航
+          : AppBar(
+              title: Column(
+                children: [
+                  Text(appLocalizations.onlineSupportTitle),
+                  // 连接状态显示在标题下方
+                  Text(
+                    getConnectionStatusText(),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: getConnectionStatusColor(),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
+              centerTitle: true,
+              // actions: [
+              //   // 添加清除历史按钮
+              //   IconButton(
+              //     icon: const Icon(Icons.delete_outline),
+              //     tooltip: '清除历史记录',
+              //     onPressed: showClearHistoryDialog,
+              //   ),
+              //   const SizedBox(width: 8),
+              // ],
             ),
-            centerTitle: true,
-        // actions: [
-        //   // 添加清除历史按钮
-        //   IconButton(
-        //     icon: const Icon(Icons.delete_outline),
-        //     tooltip: '清除历史记录',
-        //     onPressed: showClearHistoryDialog,
-        //   ),
-        //   const SizedBox(width: 8),
-        // ],
-      ),
       body: Column(
         children: [
           // 消息列表
@@ -208,7 +218,8 @@ class _OnlineSupportPageState extends ConsumerState<OnlineSupportPage> {
             child: chatState.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : chatState.messages.isEmpty
-                    ? Center(child: Text(appLocalizations.onlineSupportNoMessages))
+                    ? Center(
+                        child: Text(appLocalizations.onlineSupportNoMessages))
                     : CustomScrollView(
                         controller: scrollController,
                         // 反转滚动视图，使最新消息在底部
@@ -311,7 +322,8 @@ class _OnlineSupportPageState extends ConsumerState<OnlineSupportPage> {
                         borderSide: BorderSide.none,
                       ),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      fillColor:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
@@ -333,7 +345,8 @@ class _OnlineSupportPageState extends ConsumerState<OnlineSupportPage> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                       : IconButton(
@@ -347,7 +360,7 @@ class _OnlineSupportPageState extends ConsumerState<OnlineSupportPage> {
         ],
       ),
     );
-    
+
     // 移动端需要拦截返回按钮，桌面端直接返回 scaffold
     if (isDesktop) {
       return scaffold;
@@ -361,5 +374,84 @@ class _OnlineSupportPageState extends ConsumerState<OnlineSupportPage> {
         child: scaffold,
       );
     }
+  }
+}
+
+class _SupportNotConfiguredPage extends StatelessWidget {
+  const _SupportNotConfiguredPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop =
+        Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+    final child = Center(
+      child: Text(appLocalizations.onlineSupportApiConfigNotFound),
+    );
+
+    if (isDesktop) {
+      return Scaffold(body: child);
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(appLocalizations.onlineSupportTitle),
+      ),
+      body: child,
+    );
+  }
+}
+
+class _CrispSupportPage extends StatefulWidget {
+  const _CrispSupportPage();
+
+  @override
+  State<_CrispSupportPage> createState() => _CrispSupportPageState();
+}
+
+class _CrispSupportPageState extends State<_CrispSupportPage> {
+  bool _hasOpened = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _openCrisp();
+    });
+  }
+
+  Future<void> _openCrisp() async {
+    final uri = CustomerSupportServiceConfig.crispChatUri;
+    if (uri == null) {
+      return;
+    }
+    _hasOpened = true;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop =
+        Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+    final child = Center(
+      child: FilledButton.icon(
+        icon: const Icon(Icons.support_agent),
+        label: Text(_hasOpened ? '重新打开 Crisp 客服' : '打开 Crisp 客服'),
+        onPressed: _openCrisp,
+      ),
+    );
+
+    if (isDesktop) {
+      return Scaffold(body: child);
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(appLocalizations.onlineSupportTitle),
+      ),
+      body: child,
+    );
   }
 }

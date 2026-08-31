@@ -1,17 +1,21 @@
 import 'config_entry.dart';
 
 /// 在线客服信息
-/// 
+///
 /// 扩展ConfigEntry，添加在线客服特有的属性
 class OnlineSupportInfo extends ConfigEntry {
+  final String type;
   final String apiBaseUrl;
   final String wsBaseUrl;
+  final String? websiteId;
 
   const OnlineSupportInfo({
     required String url,
     required String description,
+    this.type = 'custom',
     required this.apiBaseUrl,
     required this.wsBaseUrl,
+    this.websiteId,
     Map<String, dynamic>? metadata,
   }) : super(url: url, description: description, metadata: metadata);
 
@@ -20,8 +24,10 @@ class OnlineSupportInfo extends ConfigEntry {
     return OnlineSupportInfo(
       url: json['url'] as String? ?? '',
       description: json['description'] as String? ?? '',
+      type: json['type'] as String? ?? 'custom',
       apiBaseUrl: json['apiBaseUrl'] as String? ?? '',
       wsBaseUrl: json['wsBaseUrl'] as String? ?? '',
+      websiteId: json['websiteId'] as String?,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }
@@ -30,21 +36,35 @@ class OnlineSupportInfo extends ConfigEntry {
   Map<String, dynamic> toJson() {
     final json = super.toJson();
     json.addAll({
+      'type': type,
       'apiBaseUrl': apiBaseUrl,
       'wsBaseUrl': wsBaseUrl,
+      if (websiteId != null) 'websiteId': websiteId,
     });
     return json;
   }
 
   /// 验证URL格式
   bool validate() {
-    return _isValidUrl(apiBaseUrl) && _isValidUrl(wsBaseUrl) && 
-           _isValidHttpUrl(apiBaseUrl) && _isValidWebSocketUrl(wsBaseUrl);
+    if (type == 'crisp') {
+      return websiteId != null && websiteId!.isNotEmpty;
+    }
+    return _isValidUrl(apiBaseUrl) &&
+        _isValidUrl(wsBaseUrl) &&
+        _isValidHttpUrl(apiBaseUrl) &&
+        _isValidWebSocketUrl(wsBaseUrl);
   }
 
   /// 获取验证错误信息
   List<String> getValidationErrors() {
     final errors = <String>[];
+
+    if (type == 'crisp') {
+      if (websiteId == null || websiteId!.isEmpty) {
+        errors.add('Crisp websiteId cannot be empty');
+      }
+      return errors;
+    }
 
     if (apiBaseUrl.isEmpty) {
       errors.add('API base URL cannot be empty');

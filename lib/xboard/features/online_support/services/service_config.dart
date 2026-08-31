@@ -1,7 +1,6 @@
 import 'package:fl_clash/xboard/core/core.dart';
 import 'package:fl_clash/xboard/config/core/service_locator.dart';
 import 'package:fl_clash/xboard/config/services/online_support_service.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_xboard_sdk/flutter_xboard_sdk.dart';
 
 // 初始化文件级日志器
@@ -35,6 +34,29 @@ class CustomerSupportServiceConfig {
     return _service?.getWebSocketBaseUrl();
   }
 
+  /// 是否配置 Crisp 客服
+  static bool get isCrisp {
+    _initializeService();
+    return _service?.isCrisp ?? false;
+  }
+
+  /// Crisp Website ID
+  static String? get crispWebsiteId {
+    _initializeService();
+    return _service?.getCrispWebsiteId();
+  }
+
+  /// Crisp 直接聊天链接
+  static Uri? get crispChatUri {
+    final websiteId = crispWebsiteId;
+    if (websiteId == null || websiteId.isEmpty) {
+      return null;
+    }
+    return Uri.https('go.crisp.chat', '/chat/embed/', {
+      'website_id': websiteId,
+    });
+  }
+
   /// 获取当前用户的认证Token
   static Future<String?> getUserToken() async {
     try {
@@ -57,11 +79,12 @@ class CustomerSupportServiceConfig {
   /// 获取配置统计信息（用于调试）
   static Map<String, dynamic> getConfigStats() {
     _initializeService();
-    return _service?.getConfigStats() ?? {
-      'totalConfigs': 0,
-      'hasApiConfig': false,
-      'hasWebSocketConfig': false,
-      'usingFallback': true,
-    };
+    return _service?.getConfigStats() ??
+        {
+          'totalConfigs': 0,
+          'hasApiConfig': false,
+          'hasWebSocketConfig': false,
+          'usingFallback': true,
+        };
   }
 }

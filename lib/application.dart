@@ -55,7 +55,7 @@ class ApplicationState extends ConsumerState<Application> {
     _autoUpdateGroupTask();
     _autoUpdateProfilesTask();
     globalState.appController = AppController(context, ref);
-    
+
     // ✅ 后台预热：统一初始化服务（不阻塞 UI）
     // 这样快速认证和登录页都能使用已初始化的 SDK
     Future.microtask(() async {
@@ -66,22 +66,23 @@ class ApplicationState extends ConsumerState<Application> {
         debugPrint('[Application] 预热初始化失败: $e');
       }
     });
-    
+
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
       final currentContext = globalState.navigatorKey.currentContext;
       if (currentContext != null) {
         globalState.appController = AppController(currentContext, ref);
       }
-      await globalState.appController.init();
+      if (globalState.appController.context.mounted) {
+        await globalState.appController.init();
+      }
       globalState.appController.initLink();
       app?.initShortcuts();
-      
+
       // ✅ 等待初始化完成后再执行快速认证
       _performQuickAuthWithDomainService();
-      
+
       // 启动后检查更新
       _checkForUpdates();
-      
     });
   }
 
@@ -91,33 +92,36 @@ class ApplicationState extends ConsumerState<Application> {
     Future.microtask(() async {
       try {
         debugPrint('[Application] 开始快速认证检查...');
-        
+
         // ✅ 等待初始化完成
         final initState = ref.read(initializationProvider);
         if (!initState.isReady) {
           debugPrint('[Application] 等待初始化完成...');
           // 等待初始化完成（最多 30 秒）
           final deadline = DateTime.now().add(const Duration(seconds: 30));
-          while (!ref.read(initializationProvider).isReady && 
-                 DateTime.now().isBefore(deadline)) {
+          while (!ref.read(initializationProvider).isReady &&
+              DateTime.now().isBefore(deadline)) {
             await Future.delayed(const Duration(milliseconds: 500));
           }
-          
+
           if (!ref.read(initializationProvider).isReady) {
             debugPrint('[Application] 初始化超时，跳过快速认证');
             return;
           }
         }
-        
+
         // SDK 已初始化，执行快速认证
         final userNotifier = ref.read(xboardUserProvider.notifier);
-        await userNotifier.quickAuth();
-        
+        final quickAuthSuccess = await userNotifier.quickAuth();
+        if (!quickAuthSuccess) {
+          await _performTestLoginIfConfigured(userNotifier);
+        }
+
         // 强制刷新UI，确保路由能够响应最新的认证状态
         if (mounted) {
           setState(() {});
         }
-        
+
         debugPrint('[Application] 快速认证检查完成');
       } catch (e) {
         debugPrint('[Application] 快速认证检查失败: $e');
@@ -129,6 +133,22 @@ class ApplicationState extends ConsumerState<Application> {
     });
   }
 
+  Future<void> _performTestLoginIfConfigured(
+    XBoardUserAuthNotifier userNotifier,
+  ) async {
+    final testAccount = ConfigFileLoader.readEnvironmentValue('TEST_ACCOUNT');
+    final testPassword = ConfigFileLoader.readEnvironmentValue('TEST_PASSWORD');
+    if (testAccount == null ||
+        testAccount.isEmpty ||
+        testPassword == null ||
+        testPassword.isEmpty) {
+      return;
+    }
+
+    debugPrint('[Application] 检测到测试账号配置，开始自动登录...');
+    final success = await userNotifier.login(testAccount, testPassword);
+    debugPrint('[Application] 测试账号自动登录结果: $success');
+  }
 
   /// 检查应用更新
   void _checkForUpdates() {
@@ -138,7 +158,7 @@ class ApplicationState extends ConsumerState<Application> {
         debugPrint('[Application] 开始自动检查更新...');
         final updateNotifier = ref.read(updateCheckProvider.notifier);
         await updateNotifier.checkForUpdates();
-        
+
         // 检查是否有更新
         final updateState = ref.read(updateCheckProvider);
         if (updateState.hasUpdate && mounted) {
@@ -250,7 +270,7 @@ class ApplicationState extends ConsumerState<Application> {
                 ref.watch(appSettingProvider.select((state) => state.locale));
             final themeProps = ref.watch(themeSettingProvider);
             final userState = ref.watch(xboardUserProvider);
-            
+
             // 使用 go_router 的路由系统
             return MaterialApp.router(
               debugShowCheckedModeBanner: false,
@@ -333,22 +353,20 @@ class ApplicationState extends ConsumerState<Application> {
       linkManager.destroy();
       _autoUpdateGroupTaskTimer?.cancel();
       _autoUpdateProfilesTaskTimer?.cancel();
-      
+
       // 释放XBoard SDK资源
       try {
         XBoardSDK.instance.dispose();
-      // ignore: empty_catches
-      } catch (e) {
-      }
-      
+        // ignore: empty_catches
+      } catch (e) {}
+
       await clashCore.destroy();
       await globalState.appController.savePreferences();
       await globalState.appController.handleExit();
-      
-    // ignore: empty_catches
-    } catch (e) {
-    }
-    
+
+      // ignore: empty_catches
+    } catch (e) {}
+
     super.dispose();
   }
 }
