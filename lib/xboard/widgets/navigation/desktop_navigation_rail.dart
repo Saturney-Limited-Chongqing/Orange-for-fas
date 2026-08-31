@@ -4,6 +4,7 @@ import 'package:fl_clash/xboard/features/online_support/pages/online_support_pag
 import 'package:fl_clash/xboard/features/online_support/services/service_config.dart';
 import 'package:fl_clash/xboard/features/shared/shared.dart';
 import 'package:fl_clash/xboard/features/invite/widgets/user_menu_widget.dart';
+import 'package:fl_clash/xboard/features/invite/pages/invite_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -67,13 +68,14 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
           child: Column(
             children: [
               const SizedBox(height: 8),
-            Expanded(
-              child: _buildNavigationItems(context, colorScheme),
-            ),
-            SizedBox(
-              height: 104,
-              child: _buildBottomActions(colorScheme, chatState),
-            ),
+              Expanded(
+                child: _buildNavigationItems(context, colorScheme),
+              ),
+              SafeArea(
+                top: false,
+                minimum: const EdgeInsets.only(bottom: 8),
+                child: _buildBottomActions(colorScheme, chatState),
+              ),
             ],
           ),
         ),
@@ -105,104 +107,171 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
   ) {
     final appLocalizations = AppLocalizations.of(context);
 
-    return NavigationRail(
-      backgroundColor: Colors.transparent,
-      selectedIndex: widget.selectedIndex == 2 ? null : widget.selectedIndex,
-      extended: _expanded,
-      minWidth: 56,
-      minExtendedWidth: 148,
-      labelType: _expanded
-          ? NavigationRailLabelType.none
-          : NavigationRailLabelType.none,
-      leading: null,
-      useIndicator: true,
-      indicatorColor: colorScheme.primaryContainer,
-      selectedIconTheme: IconThemeData(
-        color: colorScheme.primary,
-        size: 26,
-      ),
-      selectedLabelTextStyle: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: colorScheme.primary,
-      ),
-      unselectedIconTheme: IconThemeData(
-        color: colorScheme.onSurfaceVariant,
-        size: 24,
-      ),
-      unselectedLabelTextStyle: TextStyle(
-        fontSize: 11,
-        color: colorScheme.onSurfaceVariant,
-      ),
-      destinations: [
-        NavigationRailDestination(
-          icon: const Icon(Icons.home_outlined),
-          selectedIcon: const Icon(Icons.home),
-          label: Text(appLocalizations.xboardHome),
+    return Column(
+      children: [
+        _buildNavButton(
+          colorScheme,
+          index: 0,
+          icon: Icons.home_outlined,
+          selectedIcon: Icons.home,
+          label: appLocalizations.xboardHome,
         ),
-        NavigationRailDestination(
-          icon: const Icon(Icons.shopping_bag_outlined),
-          selectedIcon: const Icon(Icons.shopping_bag),
-          label: Text(appLocalizations.xboardPlans),
+        const SizedBox(height: 6),
+        _buildNavButton(
+          colorScheme,
+          index: 1,
+          icon: Icons.shopping_bag_outlined,
+          selectedIcon: Icons.shopping_bag,
+          label: appLocalizations.xboardPlans,
         ),
       ],
-      onDestinationSelected: widget.onDestinationSelected,
+    );
+  }
+
+  Widget _buildNavButton(
+    ColorScheme colorScheme, {
+    required int index,
+    required IconData icon,
+    required IconData selectedIcon,
+    required String label,
+  }) {
+    final selected = widget.selectedIndex == index;
+    return InkWell(
+      onTap: () => widget.onDestinationSelected(index),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 44,
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: selected ? colorScheme.primaryContainer : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment:
+              _expanded ? MainAxisAlignment.start : MainAxisAlignment.center,
+          children: [
+            Icon(
+              selected ? selectedIcon : icon,
+              color:
+                  selected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+            ),
+            if (_expanded) ...[
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: selected
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
   /// 底部功能区
   Widget _buildBottomActions(ColorScheme colorScheme, ChatState chatState) {
     final appLocalizations = AppLocalizations.of(context);
-    return ClipRect(
-      child: Column(
-        children: [
-          _buildDivider(colorScheme),
-          const SizedBox(height: 8),
-          InkWell(
-            onTap: _openSupport,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              height: 44,
-              margin: const EdgeInsets.symmetric(horizontal: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: _expanded
-                    ? MainAxisAlignment.start
-                    : MainAxisAlignment.center,
-                children: [
-                  _buildIconWithBadge(
-                    Icon(
-                      Icons.support_agent_outlined,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    chatState.unreadCount,
-                  ),
-                  if (_expanded) ...[
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: Text(
-                        appLocalizations.onlineSupport,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  onTap: _openInvite,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 44,
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Row(
+                      mainAxisAlignment: _expanded
+                          ? MainAxisAlignment.start
+                          : MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.card_giftcard_outlined,
                           color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w400,
                         ),
-                      ),
+                        if (_expanded) ...[
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Text(
+                              appLocalizations.invite,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ],
-                ],
-              ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _buildDivider(colorScheme),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: _openSupport,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 44,
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: _expanded
+                          ? MainAxisAlignment.start
+                          : MainAxisAlignment.center,
+                      children: [
+                        _buildIconWithBadge(
+                          Icon(
+                            Icons.support_agent_outlined,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          chatState.unreadCount,
+                        ),
+                        if (_expanded) ...[
+                          const SizedBox(width: 12),
+                          Flexible(
+                            child: Text(
+                              appLocalizations.onlineSupport,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const UserMenuWidget(),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          const UserMenuWidget(),
-          const SizedBox(height: 8),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -217,6 +286,23 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
       return;
     }
     widget.onDestinationSelected(2);
+  }
+
+  void _openInvite() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(32),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: 860,
+            maxHeight: 720,
+          ),
+          child: const InvitePage(),
+        ),
+      ),
+    );
   }
 
   /// 带未读标记的图标

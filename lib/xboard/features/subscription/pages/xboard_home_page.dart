@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
@@ -16,22 +17,26 @@ import 'package:fl_clash/xboard/features/subscription/services/subscription_stat
 import 'package:fl_clash/xboard/features/profile/providers/profile_import_provider.dart';
 import '../widgets/subscription_usage_card.dart';
 import '../widgets/xboard_connect_button.dart';
+import 'package:yaml/yaml.dart';
+
 class XBoardHomePage extends ConsumerStatefulWidget {
   const XBoardHomePage({super.key});
   @override
   ConsumerState<XBoardHomePage> createState() => _XBoardHomePageState();
 }
-class _XBoardHomePageState extends ConsumerState<XBoardHomePage> 
+
+class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
     with AutomaticKeepAliveClientMixin {
   bool _hasInitialized = false;
   bool _hasStartedLatencyTesting = false;
   bool _hasCheckedSubscriptionStatus = false;
   final _nodeSearchController = TextEditingController();
   String _nodeQuery = '';
-  
+  List<_NodeEntry> _profileNodes = [];
+
   @override
-  bool get wantKeepAlive => true;  // 保持页面状态，防止重建
-  
+  bool get wantKeepAlive => true; // 保持页面状态，防止重建
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +50,7 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
       }
       autoLatencyService.initialize(ref);
       _waitForGroupsAndStartTesting();
+      _loadProfileNodes();
     });
     ref.listenManual(xboardUserProvider, (previous, next) {
       if (next.errorMessage == 'TOKEN_EXPIRED') {
@@ -53,20 +59,26 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
         });
       }
     });
-    
+
     // 监听订阅导入完成事件
     ref.listenManual(profileImportProvider, (previous, next) {
       // 从导入中变为完成（成功或失败）
-      if (previous?.isImporting == true && !next.isImporting && !_hasCheckedSubscriptionStatus) {
+      if (previous?.isImporting == true &&
+          !next.isImporting &&
+          !_hasCheckedSubscriptionStatus) {
         _hasCheckedSubscriptionStatus = true;
+        _loadProfileNodes();
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
-            subscriptionStatusChecker.checkSubscriptionStatusOnStartup(context, ref);
+            subscriptionStatusChecker.checkSubscriptionStatusOnStartup(
+                context, ref);
           }
         });
+      } else if (previous?.isImporting == true && !next.isImporting) {
+        _loadProfileNodes();
       }
     });
-    
+
     ref.listenManual(currentProfileProvider, (previous, next) {
       if (previous?.label != next?.label && previous != null) {
         Future.delayed(const Duration(milliseconds: 1500), () {
@@ -75,9 +87,17 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
           }
         });
       }
+      _loadProfileNodes();
+    });
+    ref.listenManual(currentProfileIdProvider, (previous, next) {
+      if (previous != next) {
+        _loadProfileNodes();
+      }
     });
     ref.listenManual(groupsProvider, (previous, next) {
-      if ((previous?.isEmpty ?? true) && next.isNotEmpty && !_hasStartedLatencyTesting) {
+      if ((previous?.isEmpty ?? true) &&
+          next.isNotEmpty &&
+          !_hasStartedLatencyTesting) {
         _hasStartedLatencyTesting = true;
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
@@ -96,136 +116,150 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);  // 必须调用，配合 AutomaticKeepAliveClientMixin
-    
+    super.build(context); // 必须调用，配合 AutomaticKeepAliveClientMixin
+
     final appLocalizations = AppLocalizations.of(context);
     // 根据操作系统平台判断设备类型
-    final isDesktop = Platform.isLinux || Platform.isWindows || Platform.isMacOS;
-    
+    final isDesktop =
+        Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+
     return Scaffold(
-      appBar: isDesktop ? null : AppBar(
-        automaticallyImplyLeading: false,
-        leadingWidth: 120,
-        leading: TextButton.icon(
-          icon: const Icon(Icons.support_agent, size: 20),
-          label: Text(appLocalizations.onlineSupport),
-          onPressed: () {
-            // 移动端独有的按钮，使用 push 创建路由栈
-            context.push('/support');
-          },
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ),
-        actions: [
-          TextButton.icon(
-            icon: const Icon(Icons.card_giftcard, size: 20),
-            label: Text(appLocalizations.xboardPlanInfo),
-            onPressed: () {
-              // 移动端独有的按钮，使用 push 创建路由栈
-              context.push('/plans');
-            },
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      appBar: isDesktop
+          ? null
+          : AppBar(
+              automaticallyImplyLeading: false,
+              leadingWidth: 120,
+              leading: TextButton.icon(
+                icon: const Icon(Icons.support_agent, size: 20),
+                label: Text(appLocalizations.onlineSupport),
+                onPressed: () {
+                  // 移动端独有的按钮，使用 push 创建路由栈
+                  context.push('/support');
+                },
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+              actions: [
+                TextButton.icon(
+                  icon: const Icon(Icons.card_giftcard, size: 20),
+                  label: Text(appLocalizations.xboardPlanInfo),
+                  onPressed: () {
+                    // 移动端独有的按钮，使用 push 创建路由栈
+                    context.push('/plans');
+                  },
+                  style: TextButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
       body: Consumer(
         builder: (_, ref, __) {
           // 获取屏幕高度并计算自适应间距
           final screenHeight = MediaQuery.of(context).size.height;
-        final appBarHeight = kToolbarHeight;
-        final statusBarHeight = MediaQuery.of(context).padding.top;
-        final bottomNavHeight = 60.0; // 底部导航栏高度
-        final availableHeight = screenHeight - appBarHeight - statusBarHeight - bottomNavHeight;
-        
-        // 根据可用高度调整间距
-        double sectionSpacing;
-        double verticalPadding;
-        double horizontalPadding;
-        
-        if (availableHeight < 500) {
-          // 小屏幕：紧凑布局
-          sectionSpacing = 8.0;
-          verticalPadding = 8.0;
-          horizontalPadding = 12.0;
-        } else if (availableHeight < 650) {
-          // 中等屏幕：适中布局
-          sectionSpacing = 10.0;
-          verticalPadding = 10.0;
-          horizontalPadding = 16.0;
-        } else {
-          // 大屏幕：标准布局
-          sectionSpacing = 14.0;
-          verticalPadding = 12.0;
-          horizontalPadding = 16.0;
-        }
-        
-        if (isDesktop) {
-          return _buildDesktopHome(context);
-        }
+          final appBarHeight = kToolbarHeight;
+          final statusBarHeight = MediaQuery.of(context).padding.top;
+          final bottomNavHeight = 60.0; // 底部导航栏高度
+          final availableHeight =
+              screenHeight - appBarHeight - statusBarHeight - bottomNavHeight;
 
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                Theme.of(context).colorScheme.surface,
-              ],
+          // 根据可用高度调整间距
+          double sectionSpacing;
+          double verticalPadding;
+          double horizontalPadding;
+
+          if (availableHeight < 500) {
+            // 小屏幕：紧凑布局
+            sectionSpacing = 8.0;
+            verticalPadding = 8.0;
+            horizontalPadding = 12.0;
+          } else if (availableHeight < 650) {
+            // 中等屏幕：适中布局
+            sectionSpacing = 10.0;
+            verticalPadding = 10.0;
+            horizontalPadding = 16.0;
+          } else {
+            // 大屏幕：标准布局
+            sectionSpacing = 14.0;
+            verticalPadding = 12.0;
+            horizontalPadding = 16.0;
+          }
+
+          if (isDesktop) {
+            return _buildDesktopHome(context);
+          }
+
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Theme.of(context)
+                      .colorScheme
+                      .surfaceContainerHighest
+                      .withValues(alpha: 0.3),
+                  Theme.of(context).colorScheme.surface,
+                ],
+              ),
             ),
-          ),
-          child: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(vertical: verticalPadding),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight - (2 * verticalPadding),
-                    ),
-                    child: IntrinsicHeight(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const NoticeBanner(),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                            child: _buildUsageSection(),
-                          ),
-                          SizedBox(height: sectionSpacing),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                            child: _buildProxyModeSection(),
-                          ),
-                          SizedBox(height: sectionSpacing),
-                          const NodeSelectorBar(),
-                          SizedBox(height: sectionSpacing),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                            child: _buildConnectionSection(),
-                          ),
-                          // 添加弹性空间，确保内容不会太紧凑
-                          if (availableHeight > 600) const Spacer(),
-                        ],
+            child: SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(vertical: verticalPadding),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight:
+                            constraints.maxHeight - (2 * verticalPadding),
+                      ),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const NoticeBanner(),
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: horizontalPadding),
+                              child: _buildUsageSection(),
+                            ),
+                            SizedBox(height: sectionSpacing),
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: horizontalPadding),
+                              child: _buildProxyModeSection(),
+                            ),
+                            SizedBox(height: sectionSpacing),
+                            const NodeSelectorBar(),
+                            SizedBox(height: sectionSpacing),
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: horizontalPadding),
+                              child: _buildConnectionSection(),
+                            ),
+                            // 添加弹性空间，确保内容不会太紧凑
+                            if (availableHeight > 600) const Spacer(),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-        );
+          );
         },
       ),
     );
   }
+
   Widget _buildUsageSection() {
     return Consumer(
       builder: (context, ref, child) {
@@ -240,6 +274,7 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
       },
     );
   }
+
   Widget _buildConnectionSection() {
     return Consumer(
       builder: (context, ref, child) {
@@ -247,6 +282,7 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
       },
     );
   }
+
   Widget _buildProxyModeSection() {
     return const XBoardOutboundMode();
   }
@@ -312,8 +348,8 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
               prefixIcon: const Icon(Icons.search, size: 20),
               isDense: true,
               filled: true,
-              fillColor: colorScheme.surfaceContainerHighest
-                  .withValues(alpha: 0.22),
+              fillColor:
+                  colorScheme.surfaceContainerHighest.withValues(alpha: 0.22),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(color: colorScheme.outlineVariant),
@@ -350,13 +386,21 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
   Widget _buildDesktopNodeTile(BuildContext context, _NodeEntry entry) {
     final colorScheme = Theme.of(context).colorScheme;
     final selectedMap = ref.watch(selectedMapProvider);
+    final delay = ref.watch(getDelayProvider(proxyName: entry.proxy.name));
+    final unavailable = delay != null && delay < 0;
     final selectedName =
         entry.group.getCurrentSelectedName(selectedMap[entry.group.name] ?? '');
-    final selected = selectedName == entry.proxy.name ||
-        entry.group.now == entry.proxy.name;
+    final selected =
+        selectedName == entry.proxy.name || entry.group.now == entry.proxy.name;
+    final foregroundColor = unavailable
+        ? colorScheme.onSurfaceVariant.withValues(alpha: 0.45)
+        : colorScheme.onSurface;
+    final secondaryColor = unavailable
+        ? colorScheme.onSurfaceVariant.withValues(alpha: 0.35)
+        : colorScheme.onSurfaceVariant;
 
     return InkWell(
-      onTap: () => _selectNode(entry),
+      onTap: unavailable ? null : () => _selectNode(entry),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         height: 58,
@@ -369,7 +413,11 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
         ),
         child: Row(
           children: [
-            _buildNodeMark(context, entry.proxy.name),
+            _buildNodeMark(
+              context,
+              entry.proxy.name,
+              unavailable: unavailable,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -381,6 +429,7 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: foregroundColor,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -390,27 +439,28 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
             const SizedBox(width: 8),
             if (indexIsRecommended(entry))
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: colorScheme.inverseSurface,
+                  color: unavailable
+                      ? colorScheme.surfaceContainerHighest
+                      : colorScheme.inverseSurface,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   '推荐',
                   style: TextStyle(
-                    color: colorScheme.onInverseSurface,
+                    color: unavailable
+                        ? colorScheme.onSurfaceVariant.withValues(alpha: 0.55)
+                        : colorScheme.onInverseSurface,
                     fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: unavailable ? FontWeight.w500 : FontWeight.w700,
                   ),
                 ),
               ),
             const SizedBox(width: 10),
             Icon(
               selected ? Icons.star : Icons.star_border,
-              color: selected
-                  ? colorScheme.primary
-                  : colorScheme.onSurfaceVariant,
+              color: selected ? colorScheme.primary : secondaryColor,
               size: 22,
             ),
           ],
@@ -521,26 +571,78 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
     );
   }
 
-  Widget _buildNodeMark(BuildContext context, String name) {
+  Widget _buildNodeMark(
+    BuildContext context,
+    String name, {
+    required bool unavailable,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
-    final letters = name
-        .split(RegExp(r'[\s\-_]+'))
-        .where((part) => part.isNotEmpty)
+    final countryCode = _extractCountryCode(name);
+    final flag = countryCode == null ? null : _countryFlag(countryCode);
+    final fallback = name
+        .replaceAll(RegExp(r'^\[[^\]]+\]'), '')
+        .trim()
+        .characters
         .take(2)
-        .map((part) => part.characters.first.toUpperCase())
-        .join();
-    return CircleAvatar(
-      radius: 15,
-      backgroundColor: colorScheme.primaryContainer,
-      child: Text(
-        letters.isEmpty ? '?' : letters,
-        style: TextStyle(
-          color: colorScheme.onPrimaryContainer,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
+        .join()
+        .toUpperCase();
+
+    return Opacity(
+      opacity: unavailable ? 0.45 : 1,
+      child: CircleAvatar(
+        radius: 15,
+        backgroundColor: flag == null
+            ? colorScheme.primaryContainer
+            : colorScheme.surfaceContainerHighest,
+        child: Text(
+          flag ?? (fallback.isEmpty ? '?' : fallback),
+          style: TextStyle(
+            color: flag == null
+                ? colorScheme.onPrimaryContainer
+                : colorScheme.onSurface,
+            fontSize: flag == null ? 11 : 18,
+            fontWeight: FontWeight.w800,
+            height: 1,
+          ),
         ),
       ),
     );
+  }
+
+  String? _extractCountryCode(String name) {
+    final normalized = name.toUpperCase();
+    final bracketMatch = RegExp(r'\]([A-Z]{2})(?:\s|$|\d)').firstMatch(
+      normalized,
+    );
+    final rawCode = bracketMatch?.group(1) ??
+        RegExp(r'\b([A-Z]{2})(?:\s|$|\d)').firstMatch(normalized)?.group(1);
+    if (rawCode == null) return null;
+    const supportedCodes = {
+      'HK',
+      'JP',
+      'SG',
+      'TW',
+      'US',
+      'KR',
+      'TH',
+      'FR',
+      'GB',
+      'UK',
+      'DE',
+      'NL',
+      'CA',
+      'AU',
+      'IN',
+      'RU',
+    };
+    return supportedCodes.contains(rawCode) ? rawCode : null;
+  }
+
+  String _countryFlag(String countryCode) {
+    final flagCode = countryCode == 'UK' ? 'GB' : countryCode;
+    return flagCode.codeUnits
+        .map((unit) => String.fromCharCode(0x1F1E6 + unit - 0x41))
+        .join();
   }
 
   bool indexIsRecommended(_NodeEntry entry) {
@@ -553,12 +655,14 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
 
   List<_NodeEntry> _visibleNodes() {
     final groups = ref.watch(groupsProvider);
+    final groupNames = groups.map((group) => group.name).toSet();
     final seen = <String>{};
     final nodes = <_NodeEntry>[];
     for (final group in groups.where((group) => group.all.isNotEmpty)) {
       for (final proxy in group.all) {
         final name = proxy.name.trim();
         if (name.isEmpty ||
+            groupNames.contains(name) ||
             name.toUpperCase() == 'DIRECT' ||
             name.toUpperCase() == 'REJECT' ||
             name.contains('剩余流量') ||
@@ -572,6 +676,11 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
         }
       }
     }
+    for (final node in _profileNodes) {
+      if (seen.add(node.proxy.name)) {
+        nodes.add(node);
+      }
+    }
     return nodes;
   }
 
@@ -581,7 +690,8 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
       final selectedName = entry.group.getCurrentSelectedName(
         selectedMap[entry.group.name] ?? '',
       );
-      if (selectedName == entry.proxy.name || entry.group.now == entry.proxy.name) {
+      if (selectedName == entry.proxy.name ||
+          entry.group.now == entry.proxy.name) {
         return entry;
       }
     }
@@ -590,29 +700,137 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
   }
 
   void _selectNode(_NodeEntry entry) {
-    globalState.appController.updateCurrentSelectedMap(
-      entry.group.name,
-      entry.proxy.name,
-    );
+    final delay = ref.read(getDelayProvider(proxyName: entry.proxy.name));
+    if (delay != null && delay < 0) {
+      return;
+    }
+    if (entry.group.name.isNotEmpty) {
+      globalState.appController.updateCurrentSelectedMap(
+        entry.group.name,
+        entry.proxy.name,
+      );
+    }
     autoLatencyService.testCurrentNode(forceTest: true);
+  }
+
+  Future<void> _loadProfileNodes([int attempt = 0]) async {
+    await Future.delayed(const Duration(milliseconds: 120));
+    final profileId = ref.read(currentProfileIdProvider) ??
+        globalState.config.currentProfileId;
+    File? file;
+    if (profileId != null && profileId.isNotEmpty) {
+      file = File(await appPath.getProfilePath(profileId));
+    }
+    if (file == null || !await file.exists()) {
+      file = await _latestProfileFile();
+    }
+    if (file == null || !await file.exists()) {
+      if (attempt < 8) {
+        Future.delayed(
+          const Duration(milliseconds: 350),
+          () => _loadProfileNodes(attempt + 1),
+        );
+      }
+      return;
+    }
+    try {
+      final yaml = loadYaml(await file.readAsString());
+      if (yaml is! YamlMap) {
+        return;
+      }
+      final proxyNames = <String>{};
+      final proxies = yaml['proxies'];
+      if (proxies is YamlList) {
+        for (final item in proxies) {
+          if (item is YamlMap) {
+            final name = item['name']?.toString().trim();
+            if (name != null && _isDisplayableNodeName(name)) {
+              proxyNames.add(name);
+            }
+          }
+        }
+      }
+
+      String groupName = '';
+      final groups = yaml['proxy-groups'];
+      if (groups is YamlList && groups.isNotEmpty && groups.first is YamlMap) {
+        groupName = (groups.first as YamlMap)['name']?.toString() ?? '';
+      }
+
+      final loadedNodes = proxyNames
+          .map(
+            (name) => _NodeEntry(
+              group: Group(
+                type: GroupType.Selector,
+                name: groupName,
+                all: const [],
+              ),
+              proxy: Proxy(name: name, type: 'profile'),
+            ),
+          )
+          .toList();
+
+      if (mounted) {
+        setState(() {
+          _profileNodes = loadedNodes;
+        });
+      }
+      if (loadedNodes.isEmpty && attempt < 8) {
+        Future.delayed(
+          const Duration(milliseconds: 350),
+          () => _loadProfileNodes(attempt + 1),
+        );
+      }
+    } catch (_) {
+      // Profile parsing is a fallback only; the core groups provider remains primary.
+    }
+  }
+
+  bool _isDisplayableNodeName(String name) {
+    final upper = name.toUpperCase();
+    return name.isNotEmpty &&
+        upper != 'DIRECT' &&
+        upper != 'REJECT' &&
+        !name.contains('剩余流量') &&
+        !name.contains('套餐到期') &&
+        !name.contains('官网');
+  }
+
+  Future<File?> _latestProfileFile() async {
+    final profilesDir = Directory(await appPath.profilesPath);
+    if (!await profilesDir.exists()) {
+      return null;
+    }
+    final files = await profilesDir
+        .list()
+        .where((entity) => entity is File && entity.path.endsWith('.yaml'))
+        .cast<File>()
+        .toList();
+    if (files.isEmpty) {
+      return null;
+    }
+    files.sort((a, b) {
+      return b.lastModifiedSync().compareTo(a.lastModifiedSync());
+    });
+    return files.first;
   }
 
   /// 等待订阅导入完成后再检查订阅状态（备用方案）
   /// 如果3秒后还没有触发导入完成监听器，则主动检查
   void _waitForSubscriptionImportThenCheck() async {
     await Future.delayed(const Duration(seconds: 3));
-    
+
     // 如果已经通过监听器检查过了，就不再检查
     if (_hasCheckedSubscriptionStatus) {
       return;
     }
-    
+
     _hasCheckedSubscriptionStatus = true;
     if (mounted) {
       subscriptionStatusChecker.checkSubscriptionStatusOnStartup(context, ref);
     }
   }
-  
+
   void _showTokenExpiredDialog() {
     if (!mounted) return;
     showDialog(
@@ -670,6 +888,7 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
       }
     });
   }
+
   void _performInitialLatencyTest() {
     if (!mounted) return;
     autoLatencyService.testCurrentNode();

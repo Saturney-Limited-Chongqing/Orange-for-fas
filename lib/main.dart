@@ -11,9 +11,8 @@ import 'package:fl_clash/plugins/vpn.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/xboard/config/xboard_config.dart';
 import 'package:fl_clash/xboard/infrastructure/network/domain_racing_service.dart'; // 域名竞速服务
-import 'package:flutter/material.dart';
-import 'package:desktop_webview_window/desktop_webview_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/material.dart';
 
 import 'application.dart';
 import 'clash/core.dart';
@@ -28,12 +27,9 @@ import 'package:flutter_xboard_sdk/flutter_xboard_sdk.dart'; // 导入域名服�
 RemoteTaskManager? remoteTaskManager;
 
 Future<void> main(List<String> args) async {
-  if (runWebViewTitleBarWidget(args)) {
-    return;
-  }
-
   globalState.isService = false;
   WidgetsFlutterBinding.ensureInitialized(); // 确保 Flutter 绑定已初始化
+  ErrorWidget.builder = (_) => const SizedBox.shrink();
 
   // 首先初始化XBoard配置模块和域名服务（必须在RemoteTaskManager之前）
   await _initializeXBoardServices();

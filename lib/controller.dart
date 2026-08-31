@@ -546,6 +546,10 @@ class AppController {
 
   init() async {
     FlutterError.onError = (details) {
+      final exception = details.exceptionAsString();
+      if (exception.contains('A RenderFlex overflowed')) {
+        return;
+      }
       commonPrint.log(details.stack.toString());
     };
     updateTray(true);

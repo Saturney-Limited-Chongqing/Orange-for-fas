@@ -11,6 +11,7 @@ class Window {
     final props = globalState.config.windowProps;
     final acquire = await singleInstanceLock.acquire();
     if (!acquire) {
+      debugPrint('[Window] Another FastVPN instance is already running.');
       exit(0);
     }
     if (Platform.isWindows) {

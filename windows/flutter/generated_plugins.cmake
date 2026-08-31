@@ -5,7 +5,6 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   connectivity_plus
-  desktop_webview_window
   dynamic_color
   file_selector_windows
   flutter_js

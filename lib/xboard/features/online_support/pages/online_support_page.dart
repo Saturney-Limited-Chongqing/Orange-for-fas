@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:desktop_webview_window/desktop_webview_window.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/xboard/features/online_support/models/message_model.dart';
@@ -13,35 +12,74 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 Future<String?> openCrispSupportWindow() async {
+  if (_crispWindowOpening) {
+    return null;
+  }
+  _crispWindowOpening = true;
   final uri = CustomerSupportServiceConfig.crispChatUri;
   if (uri == null) {
+    _crispWindowOpening = false;
     return 'Crisp Website ID 未配置';
   }
 
-  final isDesktop = Platform.isLinux || Platform.isWindows || Platform.isMacOS;
-  if (isDesktop) {
-    try {
-      final available = await WebviewWindow.isWebviewAvailable();
-      if (!available) {
-        return '当前系统未安装可用的 WebView 运行环境';
-      }
-      final webview = await WebviewWindow.create(
-        configuration: const CreateConfiguration(
-          title: 'Crisp 客服',
-          windowWidth: 466,
-          windowHeight: 812,
-          useWindowPositionAndSize: true,
-        ),
-      );
-      webview.launch(uri.toString());
+  try {
+    final isDesktop =
+        Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+    if (isDesktop) {
+      await _launchCrispDesktopWindow(uri);
       return null;
-    } catch (e) {
-      return '打开 Crisp 客服窗口失败: $e';
     }
+
+    await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    return null;
+  } catch (e) {
+    return '打开 Crisp 客服窗口失败: $e';
+  } finally {
+    _crispWindowOpening = false;
+  }
+}
+
+bool _crispWindowOpening = false;
+
+Future<void> _launchCrispDesktopWindow(Uri uri) async {
+  if (Platform.isLinux) {
+    final launched = await _tryLaunchLinuxAppWindow(uri);
+    if (launched) return;
   }
 
-  await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-  return null;
+  final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+  if (!launched) {
+    throw Exception('系统没有可用的浏览器或 WebView 运行环境');
+  }
+}
+
+Future<bool> _tryLaunchLinuxAppWindow(Uri uri) async {
+  final url = uri.toString();
+  final candidates = [
+    ['google-chrome-stable', '--app=$url'],
+    ['google-chrome', '--app=$url'],
+    ['chromium', '--app=$url'],
+    ['chromium-browser', '--app=$url'],
+    ['microsoft-edge', '--app=$url'],
+    ['floorp', '--new-window', url],
+    ['firefox', '--new-window', url],
+  ];
+
+  for (final command in candidates) {
+    final executable = command.first;
+    final resolved = await Process.run('which', [executable]);
+    if (resolved.exitCode != 0) {
+      continue;
+    }
+    await Process.start(
+      executable,
+      command.sublist(1),
+      mode: ProcessStartMode.detached,
+    );
+    return true;
+  }
+
+  return false;
 }
 
 class OnlineSupportPage extends ConsumerStatefulWidget {
@@ -448,9 +486,6 @@ class _CrispSupportPageState extends State<_CrispSupportPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _openCrisp();
-    });
   }
 
   Future<void> _openCrisp() async {

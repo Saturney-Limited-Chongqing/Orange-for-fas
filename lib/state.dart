@@ -93,6 +93,13 @@ class GlobalState {
         Config(
           themeProps: defaultThemeProps,
         );
+    config = config.copyWith(
+      networkProps: config.networkProps.copyWith(systemProxy: true),
+      patchClashConfig: config.patchClashConfig.copyWith(
+        mode: Mode.rule,
+        tun: config.patchClashConfig.tun.copyWith(enable: false),
+      ),
+    );
     await globalState.migrateOldData(config);
     await AppLocalizations.load(
       utils.getLocaleForString(config.appSetting.locale) ??
