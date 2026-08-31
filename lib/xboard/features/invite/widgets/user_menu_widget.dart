@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/xboard/features/invite/pages/invite_page.dart';
 import 'package:fl_clash/xboard/features/invite/dialogs/theme_dialog.dart';
 import 'package:fl_clash/xboard/features/invite/dialogs/logout_dialog.dart';
 
@@ -12,14 +13,28 @@ class UserMenuWidget extends ConsumerWidget {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.person),
       tooltip: appLocalizations.userCenter,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
       onSelected: (value) {
         if (value == 'theme') {
           _showThemeDialog(context);
+        } else if (value == 'invite') {
+          _showInviteWindow(context);
         } else if (value == 'logout') {
           _showLogoutDialog(context);
         }
       },
       itemBuilder: (BuildContext context) => [
+        PopupMenuItem<String>(
+          value: 'invite',
+          child: Row(
+            children: [
+              const Icon(Icons.card_giftcard),
+              const SizedBox(width: 8),
+              Text(appLocalizations.invite),
+            ],
+          ),
+        ),
         PopupMenuItem<String>(
           value: 'theme',
           child: Row(
@@ -49,6 +64,23 @@ class UserMenuWidget extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => const ThemeDialog(),
+    );
+  }
+
+  void _showInviteWindow(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(32),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: 860,
+            maxHeight: 720,
+          ),
+          child: const InvitePage(),
+        ),
+      ),
     );
   }
 

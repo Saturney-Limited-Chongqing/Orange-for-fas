@@ -14,24 +14,17 @@ class MobileNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appLocalizations = AppLocalizations.of(context);
-    
     return NavigationBar(
-      selectedIndex: selectedIndex,
+      selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
       height: 60,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       destinations: [
         NavigationDestination(
           icon: const Icon(Icons.home, size: 22),
-          label: appLocalizations.xboardHome,
-        ),
-        NavigationDestination(
-          icon: const Icon(Icons.people, size: 22),
-          label: appLocalizations.invite,
+          label: AppLocalizations.of(context).xboardHome,
         ),
       ],
       onDestinationSelected: onDestinationSelected,
     );
   }
 }
-

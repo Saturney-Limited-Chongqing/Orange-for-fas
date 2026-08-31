@@ -6,6 +6,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/xboard/config/utils/config_file_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_ext/window_ext.dart';
@@ -281,9 +282,7 @@ class _WindowHeaderState extends State<WindowHeader> {
             ),
           ),
           if (Platform.isMacOS)
-            const Text(
-              appName,
-            )
+            const AppTitleText()
           else ...[
             const Positioned(
               left: 0,
@@ -313,18 +312,48 @@ class AppIcon extends StatelessWidget {
             width: 24,
             height: 24,
             child: CircleAvatar(
-              foregroundImage: AssetImage("assets/images/icon.png"),
+              foregroundImage: AssetImage("assets/images/logo.png"),
               backgroundColor: Colors.transparent,
             ),
           ),
           SizedBox(
             width: 8,
           ),
-          Text(
-            appName,
-          ),
+          AppTitleText(),
         ],
       ),
     );
+  }
+}
+
+class AppTitleText extends StatefulWidget {
+  const AppTitleText({super.key});
+
+  @override
+  State<AppTitleText> createState() => _AppTitleTextState();
+}
+
+class _AppTitleTextState extends State<AppTitleText> {
+  String _title = appName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTitle();
+  }
+
+  Future<void> _loadTitle() async {
+    final title = await ConfigFileLoaderHelper.getAppTitle();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _title = title.isNotEmpty ? title : appName;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(_title);
   }
 }

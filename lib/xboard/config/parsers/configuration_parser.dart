@@ -222,16 +222,21 @@ class ConfigValidator {
   List<ValidationError> _validateOnlineSupportList(dynamic onlineSupportList) {
     final errors = <ValidationError>[];
 
-    if (onlineSupportList is! List) {
+    final list = onlineSupportList is List
+        ? onlineSupportList
+        : onlineSupportList is Map<String, dynamic>
+            ? [onlineSupportList]
+            : null;
+
+    if (list == null) {
       errors.add(ValidationError(
         field: 'onlineSupport',
-        message: 'onlineSupport must be an array',
+        message: 'onlineSupport must be an array or object',
         type: ValidationErrorType.invalidType,
       ));
       return errors;
     }
 
-    final list = onlineSupportList;
     for (int i = 0; i < list.length; i++) {
       final item = list[i];
       if (item is! Map<String, dynamic>) {
@@ -244,6 +249,19 @@ class ConfigValidator {
       }
 
       final itemMap = item;
+      final type = itemMap['type'] as String? ?? 'custom';
+
+      if (type == 'crisp') {
+        if (itemMap['websiteId'] is! String ||
+            (itemMap['websiteId'] as String).isEmpty) {
+          errors.add(ValidationError(
+            field: 'onlineSupport[$i].websiteId',
+            message: 'Crisp online support must have a valid websiteId field',
+            type: ValidationErrorType.missingField,
+          ));
+        }
+        continue;
+      }
       
       // 验证必填字段
       if (!itemMap.containsKey('url') || itemMap['url'] is! String) {
@@ -444,7 +462,8 @@ class ConfigurationParser {
       for (final key in ['proxy', 'ws', 'update', 'onlineSupport']) {
         if (config.containsKey(key)) {
           final existingList = (merged[key] as List?) ?? [];
-          final newList = config[key] as List;
+          final value = config[key];
+          final newList = value is List ? value : [value];
           merged[key] = [...existingList, ...newList];
         }
       }

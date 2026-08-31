@@ -144,11 +144,7 @@ class Utils {
   String getTrayIconPath({
     required Brightness brightness,
   }) {
-    if (Platform.isMacOS) {
-      return "assets/images/icon_white.png";
-    }
-    final suffix = Platform.isWindows ? "ico" : "png";
-    return "assets/images/icon.$suffix";
+    return "assets/images/logo.png";
     // return switch (brightness) {
     //   Brightness.dark => "assets/images/icon_white.$suffix",
     //   Brightness.light => "assets/images/icon_black.$suffix",

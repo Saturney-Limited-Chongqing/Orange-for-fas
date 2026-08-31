@@ -32,6 +32,7 @@ class Application extends ConsumerStatefulWidget {
 class ApplicationState extends ConsumerState<Application> {
   Timer? _autoUpdateGroupTaskTimer;
   Timer? _autoUpdateProfilesTaskTimer;
+  String _appTitle = appName;
 
   final _pageTransitionsTheme = const PageTransitionsTheme(
     builders: <TargetPlatform, PageTransitionsBuilder>{
@@ -54,6 +55,7 @@ class ApplicationState extends ConsumerState<Application> {
     super.initState();
     _autoUpdateGroupTask();
     _autoUpdateProfilesTask();
+    _loadAppTitle();
     globalState.appController = AppController(context, ref);
 
     // ✅ 后台预热：统一初始化服务（不阻塞 UI）
@@ -83,6 +85,16 @@ class ApplicationState extends ConsumerState<Application> {
 
       // 启动后检查更新
       _checkForUpdates();
+    });
+  }
+
+  Future<void> _loadAppTitle() async {
+    final title = await ConfigFileLoaderHelper.getAppTitle();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _appTitle = title.isNotEmpty ? title : appName;
     });
   }
 
@@ -163,7 +175,7 @@ class ApplicationState extends ConsumerState<Application> {
         final updateState = ref.read(updateCheckProvider);
         if (updateState.hasUpdate && mounted) {
           final currentContext = globalState.navigatorKey.currentContext;
-          if (currentContext != null) {
+          if (currentContext != null && currentContext.mounted) {
             debugPrint('[Application] 发现新版本，显示更新弹窗');
             // 显示更新弹窗
             showDialog(
@@ -289,7 +301,7 @@ class ApplicationState extends ConsumerState<Application> {
               },
               routerConfig: _buildRouter(userState),
               scrollBehavior: BaseScrollBehavior(),
-              title: appName,
+              title: _appTitle,
               locale: utils.getLocaleForString(locale),
               supportedLocales: AppLocalizations.delegate.supportedLocales,
               themeMode: themeProps.themeMode,

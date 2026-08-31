@@ -110,7 +110,7 @@ class ModuleInitializer {
     });
 
     // 注册在线客服服务
-    ServiceLocator.registerLazySingleton<OnlineSupportService>(() {
+    ServiceLocator.registerFactory<OnlineSupportService>(() {
       try {
         final accessor = ServiceLocator.get<XBoardConfigAccessor>();
         final configs = accessor.getOnlineSupportConfigs();

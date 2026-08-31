@@ -20,10 +20,11 @@ final _logger = FileLogger('websocket_auto_connector.dart');
 /// 3. 登出(true → false)时自动断开 WebSocket
 /// 4. 初始化时检查当前认证状态,如果已登录则立即连接
 final webSocketAutoConnectorProvider = Provider<void>((ref) {
-  if (CustomerSupportServiceConfig.wsBaseUrl == null) {
+  if (CustomerSupportServiceConfig.isCrisp ||
+      CustomerSupportServiceConfig.wsBaseUrl == null) {
     _logger.info(
       'WebSocketAutoConnector',
-      'WebSocket 配置不存在,跳过自动连接',
+      'WebSocket 配置不存在或使用 Crisp,跳过自动连接',
     );
     return;
   }

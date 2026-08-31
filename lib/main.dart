@@ -10,9 +10,9 @@ import 'package:fl_clash/plugins/tile.dart';
 import 'package:fl_clash/plugins/vpn.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/xboard/config/xboard_config.dart';
-import 'package:fl_clash/xboard/config/utils/config_file_loader.dart'; // 配置文件加载器
 import 'package:fl_clash/xboard/infrastructure/network/domain_racing_service.dart'; // 域名竞速服务
 import 'package:flutter/material.dart';
+import 'package:desktop_webview_window/desktop_webview_window.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'application.dart';
@@ -27,7 +27,11 @@ import 'package:flutter_xboard_sdk/flutter_xboard_sdk.dart'; // 导入域名服�
 // 定义一个全局变量来持有 RemoteTaskManager 实例，方便在整个应用生命周期中访问和管理
 RemoteTaskManager? remoteTaskManager;
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
+  if (runWebViewTitleBarWidget(args)) {
+    return;
+  }
+
   globalState.isService = false;
   WidgetsFlutterBinding.ensureInitialized(); // 确保 Flutter 绑定已初始化
 

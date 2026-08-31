@@ -4,6 +4,7 @@ import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/list.dart';
+import 'package:fl_clash/xboard/config/utils/config_file_loader.dart';
 import 'package:fl_clash/xboard/features/update_check/providers/update_check_provider.dart';
 import 'package:fl_clash/xboard/features/update_check/widgets/update_dialog.dart';
 import 'package:flutter/material.dart';
@@ -193,7 +194,7 @@ class AboutView extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.all(12),
                       child: Image.asset(
-                        'assets/images/icon.png',
+                        'assets/images/logo.png',
                         width: 64,
                         height: 64,
                       ),
@@ -201,9 +202,17 @@ class AboutView extends ConsumerWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          appName,
-                          style: Theme.of(context).textTheme.headlineSmall,
+                        FutureBuilder<String>(
+                          future: ConfigFileLoaderHelper.getAppTitle(),
+                          builder: (context, snapshot) {
+                            final title = snapshot.data?.isNotEmpty == true
+                                ? snapshot.data!
+                                : appName;
+                            return Text(
+                              title,
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            );
+                          },
                         ),
                         Text(
                           globalState.packageInfo.version,

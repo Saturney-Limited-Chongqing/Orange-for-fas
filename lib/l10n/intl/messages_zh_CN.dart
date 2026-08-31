@@ -534,7 +534,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "请输入您的邮箱地址",
     ),
     "pleaseInputAdminPassword": MessageLookupByLibrary.simpleMessage(
-      "请输入管理员密码",
+      "请输入您系统的sudo密码",
     ),
     "pleaseReEnterPassword": MessageLookupByLibrary.simpleMessage("请再次输入密码"),
     "pleaseUploadFile": MessageLookupByLibrary.simpleMessage("请上传文件"),

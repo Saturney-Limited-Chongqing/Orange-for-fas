@@ -61,20 +61,16 @@ final List<RouteBase> routes = [
             ),
           ],
         ),
-        
-        // 邀请页面分支
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/invite',
-              name: 'invite',
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: InvitePage(),
-              ),
-            ),
-          ],
-        ),
       ],
+    ),
+
+    // 邀请页面（全屏，不在 Shell 内）
+    GoRoute(
+      path: '/invite',
+      name: 'invite',
+      pageBuilder: (context, state) => const MaterialPage(
+        child: InvitePage(),
+      ),
     ),
     
     // 套餐购买页面（全屏，不在 Shell 内）
@@ -156,4 +152,3 @@ class NoTransitionPage<T> extends Page<T> {
     );
   }
 }
-

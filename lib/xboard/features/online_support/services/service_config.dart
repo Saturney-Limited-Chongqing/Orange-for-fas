@@ -8,41 +8,32 @@ final _logger = FileLogger('service_config.dart');
 
 /// 客服系统服务配置
 class CustomerSupportServiceConfig {
-  static OnlineSupportService? _service;
-
-  /// 初始化配置服务
-  static void _initializeService() {
-    if (_service == null) {
-      try {
-        _service = ServiceLocator.get<OnlineSupportService>();
-      } catch (e) {
-        _logger.error('Failed to get OnlineSupportService', e);
-        // 服务不可用时，_service 保持为 null，将使用默认值
-      }
+  static OnlineSupportService? get _service {
+    try {
+      return ServiceLocator.get<OnlineSupportService>();
+    } catch (e) {
+      _logger.error('Failed to get OnlineSupportService', e);
+      return null;
     }
   }
 
   /// HTTP API 基础URL
   static String? get apiBaseUrl {
-    _initializeService();
     return _service?.getApiBaseUrl();
   }
 
   /// WebSocket 基础URL
   static String? get wsBaseUrl {
-    _initializeService();
     return _service?.getWebSocketBaseUrl();
   }
 
   /// 是否配置 Crisp 客服
   static bool get isCrisp {
-    _initializeService();
     return _service?.isCrisp ?? false;
   }
 
   /// Crisp Website ID
   static String? get crispWebsiteId {
-    _initializeService();
     return _service?.getCrispWebsiteId();
   }
 
@@ -72,13 +63,12 @@ class CustomerSupportServiceConfig {
 
   /// 检查配置服务是否可用
   static bool get isConfigServiceAvailable {
-    _initializeService();
-    return _service != null && _service!.hasAvailableConfig();
+    final service = _service;
+    return service != null && service.hasAvailableConfig();
   }
 
   /// 获取配置统计信息（用于调试）
   static Map<String, dynamic> getConfigStats() {
-    _initializeService();
     return _service?.getConfigStats() ??
         {
           'totalConfigs': 0,

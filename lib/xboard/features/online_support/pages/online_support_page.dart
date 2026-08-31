@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:desktop_webview_window/desktop_webview_window.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/xboard/features/online_support/models/message_model.dart';
@@ -10,6 +11,38 @@ import 'package:fl_clash/xboard/features/online_support/widgets/image_picker_wid
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+Future<String?> openCrispSupportWindow() async {
+  final uri = CustomerSupportServiceConfig.crispChatUri;
+  if (uri == null) {
+    return 'Crisp Website ID 未配置';
+  }
+
+  final isDesktop = Platform.isLinux || Platform.isWindows || Platform.isMacOS;
+  if (isDesktop) {
+    try {
+      final available = await WebviewWindow.isWebviewAvailable();
+      if (!available) {
+        return '当前系统未安装可用的 WebView 运行环境';
+      }
+      final webview = await WebviewWindow.create(
+        configuration: const CreateConfiguration(
+          title: 'Crisp 客服',
+          windowWidth: 466,
+          windowHeight: 812,
+          useWindowPositionAndSize: true,
+        ),
+      );
+      webview.launch(uri.toString());
+      return null;
+    } catch (e) {
+      return '打开 Crisp 客服窗口失败: $e';
+    }
+  }
+
+  await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+  return null;
+}
 
 class OnlineSupportPage extends ConsumerStatefulWidget {
   const OnlineSupportPage({super.key});
@@ -410,6 +443,7 @@ class _CrispSupportPage extends StatefulWidget {
 
 class _CrispSupportPageState extends State<_CrispSupportPage> {
   bool _hasOpened = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -420,12 +454,8 @@ class _CrispSupportPageState extends State<_CrispSupportPage> {
   }
 
   Future<void> _openCrisp() async {
-    final uri = CustomerSupportServiceConfig.crispChatUri;
-    if (uri == null) {
-      return;
-    }
-    _hasOpened = true;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    _errorMessage = await openCrispSupportWindow();
+    _hasOpened = _errorMessage == null;
     if (mounted) {
       setState(() {});
     }
@@ -436,10 +466,37 @@ class _CrispSupportPageState extends State<_CrispSupportPage> {
     final isDesktop =
         Platform.isLinux || Platform.isWindows || Platform.isMacOS;
     final child = Center(
-      child: FilledButton.icon(
-        icon: const Icon(Icons.support_agent),
-        label: Text(_hasOpened ? '重新打开 Crisp 客服' : '打开 Crisp 客服'),
-        onPressed: _openCrisp,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.support_agent,
+              size: 42,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _hasOpened ? 'Crisp 客服窗口已打开' : '打开 Crisp 客服窗口',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              icon: const Icon(Icons.open_in_new),
+              label: Text(_hasOpened ? '重新打开' : '打开客服'),
+              onPressed: _openCrisp,
+            ),
+          ],
+        ),
       ),
     );
 
