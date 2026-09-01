@@ -264,6 +264,7 @@ class ProxiesTabViewState extends ConsumerState<ProxiesTabView>
         Expanded(
           child: TabBarView(
             controller: _tabController,
+            physics: const NeverScrollableScrollPhysics(),
             children: children,
           ),
         )

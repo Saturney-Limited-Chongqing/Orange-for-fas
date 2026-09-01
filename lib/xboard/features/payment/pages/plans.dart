@@ -238,86 +238,83 @@ class _PlansViewState extends ConsumerState<PlansView> {
               title: Text(appLocalizations.xboardPlanInfo),
               // 使用 push 路由后，自动显示返回按钮
             ),
-      body: RefreshIndicator(
-        onRefresh: _refreshPlans,
-        child: Consumer(
-          builder: (context, ref, child) {
-            final plans = ref.watch(xboardSubscriptionProvider);
-            final uiState = ref.watch(userUIStateProvider);
-            if (uiState.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (uiState.errorMessage != null) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Colors.red,
+      body: Consumer(
+        builder: (context, ref, child) {
+          final plans = ref.watch(xboardSubscriptionProvider);
+          final uiState = ref.watch(userUIStateProvider);
+          if (uiState.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (uiState.errorMessage != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '加载失败',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red.shade700,
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      '加载失败',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red.shade700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      uiState.errorMessage!,
-                      style: const TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _refreshPlans,
-                      child: Text(appLocalizations.xboardRetry),
-                    ),
-                  ],
-                ),
-              );
-            }
-            if (plans.isEmpty) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.inbox_outlined,
-                      size: 64,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    uiState.errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _refreshPlans,
+                    child: Text(appLocalizations.xboardRetry),
+                  ),
+                ],
+              ),
+            );
+          }
+          if (plans.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.inbox_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    '暂无套餐信息',
+                    style: TextStyle(
+                      fontSize: 18,
                       color: Colors.grey,
                     ),
-                    SizedBox(height: 16),
-                    Text(
-                      '暂无套餐信息',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-            final screenWidth = MediaQuery.of(context).size.width;
-            final isDesktop = screenWidth > 768;
-            if (isDesktop) {
-              return _buildDesktopPlans(
-                  plans.where((plan) => plan.hasPrice).toList());
-            } else {
-              return ListView.builder(
-                itemCount: plans.length,
-                itemBuilder: (context, index) {
-                  return _buildPlanCard(plans[index]);
-                },
-              );
-            }
-          },
-        ),
+                  ),
+                ],
+              ),
+            );
+          }
+          final screenWidth = MediaQuery.of(context).size.width;
+          final isDesktop = screenWidth > 768;
+          if (isDesktop) {
+            return _buildDesktopPlans(_sortPlansForDisplay(
+                plans.where((plan) => plan.hasPrice).toList()));
+          } else {
+            return ListView.builder(
+              itemCount: plans.length,
+              itemBuilder: (context, index) {
+                return _buildPlanCard(plans[index]);
+              },
+            );
+          }
+        },
       ),
     );
 
@@ -343,12 +340,14 @@ class _PlansViewState extends ConsumerState<PlansView> {
       );
     }
 
-    final selectedPlan = _selectedPlan != null &&
-            plans.any((plan) => plan.id == _selectedPlan!.id)
-        ? _selectedPlan!
-        : plans.first;
+    final selectedPlan = _selectedPlan == null
+        ? null
+        : plans.firstWhere(
+            (plan) => plan.id == _selectedPlan!.id,
+            orElse: () => plans.first,
+          );
 
-    if (_selectedPlan?.id != selectedPlan.id) {
+    if (_selectedPlan != null && selectedPlan?.id != _selectedPlan!.id) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() => _selectedPlan = selectedPlan);
@@ -356,63 +355,114 @@ class _PlansViewState extends ConsumerState<PlansView> {
       });
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 980),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '选择订阅套餐',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '先选择套餐，再选择该套餐支持的计费周期',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 18),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final useWrap = constraints.maxWidth < 720;
-                  final width = useWrap
-                      ? constraints.maxWidth
-                      : (constraints.maxWidth - 24) / 3;
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: plans
-                        .map(
-                          (plan) => SizedBox(
-                            width: width,
-                            child: _buildDesktopPlanOption(
-                              plan,
-                              selected: plan.id == selectedPlan.id,
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  );
-                },
-              ),
-              const SizedBox(height: 8),
-              PlanPurchasePage(
-                key: ValueKey(selectedPlan.id),
-                plan: selectedPlan,
-                embedded: true,
-                onBack: _backToPlans,
-              ),
-            ],
+    if (selectedPlan != null) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 980),
+            child: PlanPurchasePage(
+              key: ValueKey(selectedPlan.id),
+              plan: selectedPlan,
+              embedded: true,
+              onBack: _backToPlans,
+            ),
           ),
         ),
-      ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, viewport) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: viewport.maxHeight - 52,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 980),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '选择订阅套餐',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '选择您想要的',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 18),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final columns = constraints.maxWidth >= 980
+                            ? 4
+                            : constraints.maxWidth >= 720
+                                ? 3
+                                : constraints.maxWidth >= 460
+                                    ? 2
+                                    : 1;
+                        final width = columns == 1
+                            ? constraints.maxWidth
+                            : ((constraints.maxWidth - 12 * (columns - 1)) /
+                                    columns)
+                                .clamp(190.0, 232.0);
+                        return Wrap(
+                          alignment: WrapAlignment.center,
+                          runAlignment: WrapAlignment.center,
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: plans
+                              .map(
+                                (plan) => SizedBox(
+                                  width: width,
+                                  child: _buildDesktopPlanOption(
+                                    plan,
+                                    selected: false,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  List<DomainPlan> _sortPlansForDisplay(List<DomainPlan> plans) {
+    final indexedPlans = plans.indexed.toList();
+    indexedPlans.sort((a, b) {
+      final aTrial = _isTrialPlan(a.$2);
+      final bTrial = _isTrialPlan(b.$2);
+      if (aTrial != bTrial) {
+        return aTrial ? -1 : 1;
+      }
+      return a.$1.compareTo(b.$1);
+    });
+    return indexedPlans.map((entry) => entry.$2).toList();
+  }
+
+  bool _isTrialPlan(DomainPlan plan) {
+    final name = plan.name.toLowerCase();
+    return name.contains('trial') || name.contains('试用');
   }
 
   Widget _buildDesktopPlanOption(
@@ -424,7 +474,7 @@ class _PlansViewState extends ConsumerState<PlansView> {
       onTap: () => setState(() => _selectedPlan = plan),
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        height: 132,
+        height: 292,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
@@ -439,46 +489,80 @@ class _PlansViewState extends ConsumerState<PlansView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    plan.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                ),
-                if (selected)
-                  Text(
-                    '已选',
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-              ],
-            ),
-            const Spacer(),
             Text(
-              '起 ${_getLowestPrice(plan)}',
+              plan.name,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 18),
             Text(
-              '${AppLocalizations.of(context).xboardTraffic}: ${_formatTraffic(plan.transferQuota.toDouble())}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+              '${_getLowestPrice(plan)} 起',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w900,
                   ),
+            ),
+            const SizedBox(height: 22),
+            _buildDesktopPlanFeature(
+              context,
+              Icons.data_usage,
+              '${AppLocalizations.of(context).xboardTraffic}: ${_formatTraffic(plan.transferQuota.toDouble())}',
+            ),
+            const SizedBox(height: 10),
+            _buildDesktopPlanFeature(
+              context,
+              Icons.speed,
+              '${AppLocalizations.of(context).xboardSpeedLimit}: ${_getSpeedLimitText(plan)}',
+            ),
+            const SizedBox(height: 10),
+            _buildDesktopPlanFeature(
+              context,
+              Icons.devices,
+              plan.deviceLimit == null || plan.deviceLimit == 0
+                  ? '设备数：${AppLocalizations.of(context).xboardUnlimited}'
+                  : '设备数：${plan.deviceLimit} 台',
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => setState(() => _selectedPlan = plan),
+                child: const Text('选择套餐'),
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDesktopPlanFeature(
+    BuildContext context,
+    IconData icon,
+    String text,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 15,
+          color: colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ),
+      ],
     );
   }
 }

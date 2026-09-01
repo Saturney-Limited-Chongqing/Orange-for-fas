@@ -181,6 +181,30 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
     return periods;
   }
 
+  int _selectedPeriodIndex(List<Map<String, dynamic>> periods) {
+    final index = periods.indexWhere(
+      (period) => period['period'] == _selectedPeriod,
+    );
+    return index < 0 ? 0 : index;
+  }
+
+  Map<String, dynamic>? _selectedPeriodData(
+      List<Map<String, dynamic>> periods) {
+    if (periods.isEmpty) {
+      return null;
+    }
+    return periods[_selectedPeriodIndex(periods)];
+  }
+
+  void _selectPeriod(String period) {
+    setState(() {
+      _selectedPeriod = period;
+    });
+    if (_couponCode != null) {
+      _recalculateDiscount();
+    }
+  }
+
   double _getCurrentPrice() {
     if (_selectedPeriod == null) return 0.0;
     final periods = _getAvailablePeriods(context);
@@ -568,8 +592,16 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (widget.onBack != null) ...[
+            TextButton.icon(
+              onPressed: widget.onBack,
+              icon: const Icon(Icons.arrow_back, size: 18),
+              label: const Text('返回套餐'),
+            ),
+            const SizedBox(height: 12),
+          ],
           Text(
-            AppLocalizations.of(context).xboardSelectPaymentPeriod,
+            widget.plan.name,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -582,36 +614,20 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
                 ),
           ),
           const SizedBox(height: 20),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final useWrap = constraints.maxWidth < 660;
-              final cards = periods
-                  .map(
-                    (period) => SizedBox(
-                      width: useWrap
-                          ? constraints.maxWidth
-                          : (constraints.maxWidth - 24) / 3,
-                      child: _buildBillingCard(
-                        context,
-                        period,
-                        selected: _selectedPeriod == period['period'],
-                      ),
-                    ),
-                  )
-                  .toList();
-              return Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: cards,
-              );
-            },
-          ),
+          _buildPeriodSlider(context, periods),
           const SizedBox(height: 16),
           if (periods.isEmpty)
             Text(
               AppLocalizations.of(context).xboardNoAvailablePlan,
               style: TextStyle(color: colorScheme.onSurfaceVariant),
             ),
+          if (_selectedPeriodData(periods) case final selectedPeriod?)
+            _buildBillingCard(
+              context,
+              selectedPeriod,
+              selected: true,
+            ),
+          const SizedBox(height: 16),
 
           // 确认购买按钮
           SizedBox(
@@ -735,14 +751,7 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
     final hasDiscount = selected && _couponType != null && finalPrice < price;
 
     return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedPeriod = period['period'];
-          if (_couponCode != null) {
-            _recalculateDiscount();
-          }
-        });
-      },
+      onTap: () => _selectPeriod(period['period']),
       borderRadius: BorderRadius.circular(10),
       child: Container(
         height: 168,
@@ -819,6 +828,90 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPeriodSlider(
+    BuildContext context,
+    List<Map<String, dynamic>> periods,
+  ) {
+    if (periods.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final colorScheme = Theme.of(context).colorScheme;
+    final selectedIndex = _selectedPeriodIndex(periods);
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                AppLocalizations.of(context).xboardSelectPaymentPeriod,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const Spacer(),
+              Text(
+                periods[selectedIndex]['label']?.toString() ?? '',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Slider(
+            value: selectedIndex.toDouble(),
+            min: 0,
+            max: (periods.length - 1).toDouble(),
+            divisions: periods.length > 1 ? periods.length - 1 : null,
+            label: periods[selectedIndex]['label']?.toString(),
+            onChanged: periods.length <= 1
+                ? null
+                : (value) {
+                    final index = value.round().clamp(0, periods.length - 1);
+                    _selectPeriod(periods[index]['period']);
+                  },
+          ),
+          Row(
+            children: [
+              for (var i = 0; i < periods.length; i++)
+                Expanded(
+                  child: Text(
+                    periods[i]['label']?.toString() ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: i == 0
+                        ? TextAlign.left
+                        : i == periods.length - 1
+                            ? TextAlign.right
+                            : TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: i == selectedIndex
+                              ? colorScheme.primary
+                              : colorScheme.onSurfaceVariant,
+                          fontWeight: i == selectedIndex
+                              ? FontWeight.w800
+                              : FontWeight.w500,
+                        ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }

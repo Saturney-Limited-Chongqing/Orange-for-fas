@@ -63,26 +63,22 @@ class _InvitePageState extends ConsumerState<InvitePage>
             ),
       body: Consumer(
         builder: (_, ref, __) {
-          return RefreshIndicator(
-            onRefresh: () => ref.read(inviteProvider.notifier).refresh(),
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const ErrorCard(),
-                  const InviteRulesCard(),
-                  const SizedBox(height: 16),
-                  const InviteQrCard(),
-                  const SizedBox(height: 16),
-                  const InviteStatsCard(),
-                  const SizedBox(height: 16),
-                  const WalletDetailsCard(),
-                  const SizedBox(height: 16),
-                  const CommissionHistoryCard(),
-                ],
-              ),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const ErrorCard(),
+                const InviteRulesCard(),
+                const SizedBox(height: 16),
+                const InviteQrCard(),
+                const SizedBox(height: 16),
+                const InviteStatsCard(),
+                const SizedBox(height: 16),
+                const WalletDetailsCard(),
+                const SizedBox(height: 16),
+                const CommissionHistoryCard(),
+              ],
             ),
           );
         },
