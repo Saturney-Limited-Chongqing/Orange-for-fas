@@ -405,12 +405,11 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
   Widget _buildDesktopNodeTile(BuildContext context, _NodeEntry entry) {
     final colorScheme = Theme.of(context).colorScheme;
     final selectedMap = ref.watch(selectedMapProvider);
-    final delay = ref.watch(getDelayProvider(proxyName: entry.proxy.name));
-    final unavailable = delay != null && delay < 0;
-    final selectedName =
-        entry.group.getCurrentSelectedName(selectedMap[entry.group.name] ?? '');
-    final selected =
-        selectedName == entry.proxy.name || entry.group.now == entry.proxy.name;
+    final delay = entry.isAuto
+        ? null
+        : ref.watch(getDelayProvider(proxyName: entry.proxy.name));
+    final unavailable = !entry.isAuto && delay != null && delay < 0;
+    final selected = _isNodeSelected(entry, selectedMap);
     final foregroundColor = unavailable
         ? colorScheme.onSurfaceVariant.withValues(alpha: 0.45)
         : colorScheme.onSurface;
@@ -436,6 +435,7 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
               context,
               entry.proxy.name,
               unavailable: unavailable,
+              isAuto: entry.isAuto,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -444,7 +444,7 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    displayProxyName(entry.proxy.name),
+                    entry.displayName,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -492,48 +492,52 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
     final colorScheme = Theme.of(context).colorScheme;
     final current = _currentNodeEntry();
 
-    return SingleChildScrollView(
+    return Padding(
       padding: const EdgeInsets.all(28),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const NoticeBanner(),
-              const SizedBox(height: 12),
-              const XBoardOutboundMode(),
-              const SizedBox(height: 32),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildActionCard(
-                      context,
-                      icon: Icons.location_on,
-                      title: current == null
-                          ? '未选择'
-                          : displayProxyName(current.proxy.name),
-                      subtitle: null,
-                      color: colorScheme.error,
-                    ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const NoticeBanner(),
+          const SizedBox(height: 32),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildActionCard(
+                              context,
+                              icon: Icons.location_on,
+                              title: current == null
+                                  ? '未选择'
+                                  : displayProxyName(current.proxy.name),
+                              subtitle: null,
+                              color: colorScheme.error,
+                              selected: current != null && !current.isAuto,
+                              onTap: current == null || current.isAuto
+                                  ? null
+                                  : () => _selectNode(current),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(child: XBoardOutboundMode()),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const XBoardConnectButton(isFloating: false),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionCard(
-                      context,
-                      icon: Icons.auto_awesome_motion,
-                      title: '智能分流',
-                      subtitle: null,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 12),
-              const XBoardConnectButton(isFloating: false),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -816,42 +820,64 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
     required String title,
     required String? subtitle,
     required Color color,
+    bool selected = false,
+    VoidCallback? onTap,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      height: 112,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: color.withValues(alpha: 0.12),
-            child: Icon(icon, size: 15, color: color),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 112,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected
+              ? colorScheme.primaryContainer.withValues(alpha: 0.45)
+              : colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+          borderRadius: BorderRadius.circular(8),
+          border: selected
+              ? Border.all(color: colorScheme.primary.withValues(alpha: 0.65))
+              : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: color.withValues(alpha: 0.12),
+                  child: Icon(icon, size: 15, color: color),
                 ),
-          ),
-          if (subtitle != null)
+                const Spacer(),
+                if (selected)
+                  Icon(
+                    Icons.check,
+                    size: 18,
+                    color: colorScheme.primary,
+                  ),
+              ],
+            ),
+            const SizedBox(height: 18),
             Text(
-              subtitle,
-              maxLines: 1,
+              title,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
             ),
-        ],
+            if (subtitle != null)
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -860,8 +886,23 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
     BuildContext context,
     String name, {
     required bool unavailable,
+    bool isAuto = false,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
+    if (isAuto) {
+      return Opacity(
+        opacity: unavailable ? 0.45 : 1,
+        child: CircleAvatar(
+          radius: 15,
+          backgroundColor: colorScheme.primaryContainer,
+          child: Icon(
+            Icons.auto_awesome_motion,
+            size: 16,
+            color: colorScheme.primary,
+          ),
+        ),
+      );
+    }
     final countryCode = extractCountryCodeFromNodeName(name);
     final flag = countryCode == null ? null : countryFlagEmoji(countryCode);
     final fallback = name
@@ -907,6 +948,11 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
     final groupNames = groups.map((group) => group.name).toSet();
     final seen = <String>{};
     final nodes = <_NodeEntry>[];
+    final autoEntry = _autoNodeEntry(groups);
+    if (autoEntry != null) {
+      nodes.add(autoEntry);
+      seen.add(autoEntry.proxy.name);
+    }
     for (final group in groups.where((group) => group.all.isNotEmpty)) {
       for (final proxy in group.all) {
         final name = proxy.name.trim();
@@ -929,7 +975,14 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
 
   _NodeEntry? _currentNodeEntry() {
     final selectedMap = ref.watch(selectedMapProvider);
+    final autoEntry = _autoNodeEntry();
+    if (autoEntry != null && _isNodeSelected(autoEntry, selectedMap)) {
+      return autoEntry;
+    }
     for (final entry in _visibleNodes()) {
+      if (entry.isAuto) {
+        continue;
+      }
       final selectedName = entry.group.getCurrentSelectedName(
         selectedMap[entry.group.name] ?? '',
       );
@@ -943,8 +996,10 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
   }
 
   void _selectNode(_NodeEntry entry) {
-    final delay = ref.read(getDelayProvider(proxyName: entry.proxy.name));
-    if (delay != null && delay < 0) {
+    final delay = entry.isAuto
+        ? null
+        : ref.read(getDelayProvider(proxyName: entry.proxy.name));
+    if (!entry.isAuto && delay != null && delay < 0) {
       return;
     }
     if (entry.group.name.isNotEmpty) {
@@ -954,6 +1009,56 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
       );
     }
     autoLatencyService.testCurrentNode(forceTest: true);
+  }
+
+  bool _isNodeSelected(_NodeEntry entry, Map<String, String> selectedMap) {
+    final selectedName = entry.group.getCurrentSelectedName(
+      selectedMap[entry.group.name] ?? '',
+    );
+    if (entry.isAuto) {
+      return selectedMap[entry.group.name] == entry.proxy.name ||
+          selectedName == entry.proxy.name;
+    }
+    return selectedName == entry.proxy.name ||
+        entry.group.now == entry.proxy.name;
+  }
+
+  _NodeEntry? _autoNodeEntry([List<Group>? sourceGroups]) {
+    final List<Group> groups = sourceGroups ?? ref.watch(groupsProvider);
+    if (groups.isEmpty) {
+      return null;
+    }
+    final autoGroups = groups
+        .where((group) =>
+            group.type == GroupType.URLTest &&
+            group.hidden != true &&
+            group.all.any((proxy) => _isDisplayableNodeName(proxy.name)))
+        .toList();
+    if (autoGroups.isEmpty) {
+      return null;
+    }
+    final autoGroup = autoGroups.first;
+    final parentGroup = groups.firstWhere(
+      (group) =>
+          group.type == GroupType.Selector &&
+          group.hidden != true &&
+          group.all.any((proxy) => proxy.name == autoGroup.name),
+      orElse: () => groups.firstWhere(
+        (group) =>
+            group.name == GroupName.GLOBAL.name &&
+            group.all.any((proxy) => proxy.name == autoGroup.name),
+        orElse: () => autoGroup,
+      ),
+    );
+    return _NodeEntry(
+      group: parentGroup,
+      proxy: Proxy(
+        name: autoGroup.name,
+        type: 'url-test',
+        now: autoGroup.now,
+      ),
+      isAuto: true,
+    );
   }
 
   Future<void> _loadProfileNodes([int attempt = 0]) async {
@@ -1161,9 +1266,13 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
 class _NodeEntry {
   final Group group;
   final Proxy proxy;
+  final bool isAuto;
 
   const _NodeEntry({
     required this.group,
     required this.proxy,
+    this.isAuto = false,
   });
+
+  String get displayName => isAuto ? '自动' : displayProxyName(proxy.name);
 }

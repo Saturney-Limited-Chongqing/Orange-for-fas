@@ -5,6 +5,7 @@ import 'package:fl_clash/xboard/features/auth/providers/xboard_user_provider.dar
 import 'package:fl_clash/xboard/features/subscription/providers/xboard_subscription_provider.dart';
 import 'plan_purchase_page.dart';
 import '../widgets/plan_description_widget.dart';
+import '../widgets/subscription_overview_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -358,16 +359,23 @@ class _PlansViewState extends ConsumerState<PlansView> {
     if (selectedPlan != null) {
       return SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 980),
-            child: PlanPurchasePage(
-              key: ValueKey(selectedPlan.id),
-              plan: selectedPlan,
-              embedded: true,
-              onBack: _backToPlans,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SubscriptionOverviewCard(),
+            const SizedBox(height: 28),
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 980),
+                child: PlanPurchasePage(
+                  key: ValueKey(selectedPlan.id),
+                  plan: selectedPlan,
+                  embedded: true,
+                  onBack: _backToPlans,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       );
     }
@@ -380,66 +388,80 @@ class _PlansViewState extends ConsumerState<PlansView> {
             constraints: BoxConstraints(
               minHeight: viewport.maxHeight - 52,
             ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 980),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      '选择订阅套餐',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '选择您想要的',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                    ),
-                    const SizedBox(height: 18),
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final columns = constraints.maxWidth >= 980
-                            ? 4
-                            : constraints.maxWidth >= 720
-                                ? 3
-                                : constraints.maxWidth >= 460
-                                    ? 2
-                                    : 1;
-                        final width = columns == 1
-                            ? constraints.maxWidth
-                            : ((constraints.maxWidth - 12 * (columns - 1)) /
-                                    columns)
-                                .clamp(190.0, 232.0);
-                        return Wrap(
-                          alignment: WrapAlignment.center,
-                          runAlignment: WrapAlignment.center,
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: plans
-                              .map(
-                                (plan) => SizedBox(
-                                  width: width,
-                                  child: _buildDesktopPlanOption(
-                                    plan,
-                                    selected: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SubscriptionOverviewCard(),
+                const SizedBox(height: 28),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 980),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          '选择订阅套餐',
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
                                   ),
-                                ),
-                              )
-                              .toList(),
-                        );
-                      },
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '选择您想要的',
+                          textAlign: TextAlign.center,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                        ),
+                        const SizedBox(height: 18),
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final cardHeight =
+                                (viewport.maxHeight - 340).clamp(292.0, 720.0);
+                            final columns = constraints.maxWidth >= 980
+                                ? 4
+                                : constraints.maxWidth >= 720
+                                    ? 3
+                                    : constraints.maxWidth >= 460
+                                        ? 2
+                                        : 1;
+                            final width = columns == 1
+                                ? constraints.maxWidth
+                                : ((constraints.maxWidth - 12 * (columns - 1)) /
+                                        columns)
+                                    .clamp(190.0, 232.0);
+                            return Wrap(
+                              alignment: WrapAlignment.center,
+                              runAlignment: WrapAlignment.center,
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: plans
+                                  .map(
+                                    (plan) => SizedBox(
+                                      width: width,
+                                      child: _buildDesktopPlanOption(
+                                        plan,
+                                        selected: false,
+                                        height: cardHeight,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         );
@@ -468,13 +490,14 @@ class _PlansViewState extends ConsumerState<PlansView> {
   Widget _buildDesktopPlanOption(
     DomainPlan plan, {
     required bool selected,
+    required double height,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: () => setState(() => _selectedPlan = plan),
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        height: 292,
+        height: height,
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
