@@ -122,15 +122,17 @@ class XBoardOutboundMode extends StatelessWidget {
         final tunEnabled = ref.watch(
             patchClashConfigProvider.select((state) => state.tun.enable));
         return Container(
+          height: 112,
           decoration: BoxDecoration(
             color: Theme.of(context)
                 .colorScheme
                 .surfaceContainerHighest
-                .withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
+                .withValues(alpha: 0.45),
+            borderRadius: BorderRadius.circular(8),
           ),
           padding: const EdgeInsets.all(14.0),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -150,86 +152,95 @@ class XBoardOutboundMode extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                      child: FilterChip(
-                        label: Text(Intl.message(Mode.rule.name)),
-                        selected: mode == Mode.rule,
-                        onSelected: (selected) {
-                          if (selected) {
-                            _handleModeChange(ref, Mode.rule);
-                          }
-                        },
-                        selectedColor:
-                            Theme.of(context).colorScheme.primaryContainer,
-                        checkmarkColor:
-                            Theme.of(context).colorScheme.onPrimaryContainer,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 0),
-                        labelStyle: TextStyle(
-                          fontSize: 13,
-                          color: mode == Mode.rule
-                              ? Theme.of(context).colorScheme.onPrimaryContainer
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final buttonWidth =
+                      ((constraints.maxWidth - 16) / 3).clamp(64.0, 96.0);
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.spaceBetween,
+                    children: [
+                      SizedBox(
+                        width: buttonWidth,
+                        child: _buildModeChip(
+                          context,
+                          label: Intl.message(Mode.rule.name),
+                          selected: mode == Mode.rule,
+                          onSelected: () => _handleModeChange(ref, Mode.rule),
+                        ),
+                      ),
+                      SizedBox(
+                        width: buttonWidth,
+                        child: _buildModeChip(
+                          context,
+                          label: Intl.message(Mode.global.name),
+                          selected: mode == Mode.global,
+                          onSelected: () => _handleModeChange(ref, Mode.global),
+                        ),
+                      ),
+                      SizedBox(
+                        width: buttonWidth,
+                        child: _buildModeChip(
+                          context,
+                          label: 'TUN',
+                          selected: tunEnabled,
+                          onSelected: () =>
+                              _handleTunToggle(context, ref, !tunEnabled),
+                          selectedColor: tunSelectedColor,
+                          checkmarkColor: tunCheckmarkColor,
+                          side: tunEnabled
+                              ? BorderSide(color: tunBorderColor, width: 1)
                               : null,
                         ),
                       ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                      child: FilterChip(
-                        label: Text(Intl.message(Mode.global.name)),
-                        selected: mode == Mode.global,
-                        onSelected: (selected) {
-                          if (selected) {
-                            _handleModeChange(ref, Mode.global);
-                          }
-                        },
-                        selectedColor:
-                            Theme.of(context).colorScheme.primaryContainer,
-                        checkmarkColor:
-                            Theme.of(context).colorScheme.onPrimaryContainer,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 0),
-                        labelStyle: TextStyle(
-                          fontSize: 13,
-                          color: mode == Mode.global
-                              ? Theme.of(context).colorScheme.onPrimaryContainer
-                              : null,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                      child: FilterChip(
-                        label: const Text("TUN"),
-                        selected: tunEnabled,
-                        onSelected: (selected) {
-                          _handleTunToggle(context, ref, selected);
-                        },
-                        selectedColor: tunSelectedColor,
-                        checkmarkColor: tunCheckmarkColor,
-                        side: tunEnabled
-                            ? BorderSide(color: tunBorderColor, width: 1)
-                            : null,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 0),
-                        labelStyle: const TextStyle(fontSize: 13),
-                      ),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildModeChip(
+    BuildContext context, {
+    required String label,
+    required bool selected,
+    required VoidCallback onSelected,
+    Color? selectedColor,
+    Color? checkmarkColor,
+    BorderSide? side,
+  }) {
+    return FilterChip(
+      label: Center(
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      selected: selected,
+      onSelected: (value) {
+        if (value || label == 'TUN') {
+          onSelected();
+        }
+      },
+      selectedColor:
+          selectedColor ?? Theme.of(context).colorScheme.primaryContainer,
+      checkmarkColor:
+          checkmarkColor ?? Theme.of(context).colorScheme.onPrimaryContainer,
+      side: side,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+      labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+      labelStyle: TextStyle(
+        fontSize: 13,
+        color:
+            selected ? Theme.of(context).colorScheme.onPrimaryContainer : null,
+      ),
     );
   }
 }

@@ -19,6 +19,15 @@ class PlansView extends ConsumerStatefulWidget {
 class _PlansViewState extends ConsumerState<PlansView> {
   DomainPlan? _selectedPlan; // 桌面端选中的套餐
   bool _hasCheckedUrlParams = false; // 标记是否已检查URL参数
+  final _desktopPlansScrollController = ScrollController();
+  final _desktopVerticalScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _desktopPlansScrollController.dispose();
+    _desktopVerticalScrollController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -359,113 +368,133 @@ class _PlansViewState extends ConsumerState<PlansView> {
     if (selectedPlan != null) {
       return SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SubscriptionOverviewCard(),
-            const SizedBox(height: 28),
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 980),
-                child: PlanPurchasePage(
-                  key: ValueKey(selectedPlan.id),
-                  plan: selectedPlan,
-                  embedded: true,
-                  onBack: _backToPlans,
-                ),
-              ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 980),
+            child: PlanPurchasePage(
+              key: ValueKey(selectedPlan.id),
+              plan: selectedPlan,
+              embedded: true,
+              onBack: _backToPlans,
             ),
-          ],
+          ),
         ),
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, viewport) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: viewport.maxHeight - 52,
-            ),
+    return Scrollbar(
+      controller: _desktopVerticalScrollController,
+      thumbVisibility: true,
+      trackVisibility: true,
+      interactive: true,
+      child: SingleChildScrollView(
+        controller: _desktopVerticalScrollController,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height - kToolbarHeight,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SubscriptionOverviewCard(),
                 const SizedBox(height: 28),
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 980),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          '选择订阅套餐',
-                          textAlign: TextAlign.center,
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '选择您想要的',
-                          textAlign: TextAlign.center,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                        ),
-                        const SizedBox(height: 18),
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final cardHeight =
-                                (viewport.maxHeight - 340).clamp(292.0, 720.0);
-                            final columns = constraints.maxWidth >= 980
-                                ? 4
-                                : constraints.maxWidth >= 720
-                                    ? 3
-                                    : constraints.maxWidth >= 460
-                                        ? 2
-                                        : 1;
-                            final width = columns == 1
-                                ? constraints.maxWidth
-                                : ((constraints.maxWidth - 12 * (columns - 1)) /
-                                        columns)
-                                    .clamp(190.0, 232.0);
-                            return Wrap(
-                              alignment: WrapAlignment.center,
-                              runAlignment: WrapAlignment.center,
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: plans
-                                  .map(
-                                    (plan) => SizedBox(
-                                      width: width,
-                                      child: _buildDesktopPlanOption(
-                                        plan,
-                                        selected: false,
-                                        height: cardHeight,
-                                      ),
+                SizedBox(
+                  height: (MediaQuery.of(context).size.height - 380)
+                      .clamp(292.0, 720.0),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 980),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          const titleBlockHeight = 72.0;
+                          final cardHeight =
+                              (constraints.maxHeight - titleBlockHeight)
+                                  .clamp(292.0, constraints.maxHeight);
+                          final columns = constraints.maxWidth >= 980
+                              ? 4
+                              : constraints.maxWidth >= 720
+                                  ? 3
+                                  : constraints.maxWidth >= 460
+                                      ? 2
+                                      : 1;
+                          final width = columns == 1
+                              ? constraints.maxWidth
+                              : ((constraints.maxWidth - 12 * (columns - 1)) /
+                                      columns)
+                                  .clamp(190.0, 232.0);
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                '选择订阅套餐',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '选择您想要的',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                     ),
-                                  )
-                                  .toList(),
-                            );
-                          },
-                        ),
-                      ],
+                              ),
+                              const SizedBox(height: 18),
+                              Expanded(
+                                child: Scrollbar(
+                                  controller: _desktopPlansScrollController,
+                                  thumbVisibility: true,
+                                  trackVisibility: true,
+                                  interactive: true,
+                                  child: SingleChildScrollView(
+                                    controller: _desktopPlansScrollController,
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: plans
+                                          .map(
+                                            (plan) => Padding(
+                                              padding: const EdgeInsets.only(
+                                                  right: 12),
+                                              child: SizedBox(
+                                                width: width,
+                                                height: cardHeight,
+                                                child: _buildDesktopPlanOption(
+                                                  plan,
+                                                  selected: false,
+                                                  height: cardHeight,
+                                                ),
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
