@@ -226,34 +226,10 @@ class XBoardOutboundMode extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                _getModeDescription(mode, tunEnabled, context),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.65),
-                      fontSize: 12,
-                    ),
-              ),
             ],
           ),
         );
       },
     );
-  }
-
-  String _getModeDescription(Mode mode, bool tunEnabled, BuildContext context) {
-    final tunStatus =
-        tunEnabled ? ' | ${AppLocalizations.of(context).xboardTunEnabled}' : '';
-    switch (mode) {
-      case Mode.rule:
-        return '${AppLocalizations.of(context).xboardProxyModeRuleDescription}$tunStatus';
-      case Mode.global:
-        return '${AppLocalizations.of(context).xboardProxyModeGlobalDescription}$tunStatus';
-      case Mode.direct:
-        return '${AppLocalizations.of(context).xboardProxyModeDirectDescription}$tunStatus';
-    }
   }
 }

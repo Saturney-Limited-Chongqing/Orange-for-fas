@@ -501,7 +501,9 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const NoticeBanner(),
-              const SizedBox(height: 96),
+              const SizedBox(height: 12),
+              const XBoardOutboundMode(),
+              const SizedBox(height: 32),
               Row(
                 children: [
                   Expanded(
@@ -529,14 +531,6 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
               ),
               const SizedBox(height: 12),
               const XBoardConnectButton(isFloating: false),
-              const SizedBox(height: 18),
-              TextButton.icon(
-                onPressed: () => context.push('/plans'),
-                icon: const Icon(Icons.arrow_forward, size: 18),
-                label: const Text('购买会员'),
-              ),
-              const SizedBox(height: 12),
-              const XBoardOutboundMode(),
             ],
           ),
         ),
