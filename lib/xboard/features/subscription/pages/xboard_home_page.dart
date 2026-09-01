@@ -5,6 +5,7 @@ import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/xboard/domain/domain.dart';
 import 'package:fl_clash/xboard/features/auth/providers/xboard_user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -289,22 +290,39 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
 
   Widget _buildDesktopHome(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final userInfo = ref.watch(xboardUserProvider).userInfo;
+    final currentProfile = ref.watch(currentProfileProvider);
     return Container(
       color: colorScheme.surface,
       child: SafeArea(
-        child: Row(
+        child: Column(
           children: [
-            SizedBox(
-              width: 360,
-              child: _buildDesktopNodePanel(context),
-            ),
-            VerticalDivider(
-              width: 1,
-              thickness: 1,
-              color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-            ),
+            if (userInfo != null || currentProfile?.subscriptionInfo != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 18, 18, 0),
+                child: _buildDesktopSubscriptionOverview(
+                  context,
+                  userInfo,
+                  currentProfile?.subscriptionInfo,
+                ),
+              ),
             Expanded(
-              child: _buildDesktopActionPanel(context),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 360,
+                    child: _buildDesktopNodePanel(context),
+                  ),
+                  VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+                  ),
+                  Expanded(
+                    child: _buildDesktopActionPanel(context),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -320,7 +338,8 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
       if (query.isEmpty) {
         return true;
       }
-      return entry.proxy.name.toLowerCase().contains(query) ||
+      return displayProxyName(entry.proxy.name).toLowerCase().contains(query) ||
+          entry.proxy.name.toLowerCase().contains(query) ||
           entry.group.name.toLowerCase().contains(query);
     }).toList();
 
@@ -425,7 +444,7 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    entry.proxy.name,
+                    displayProxyName(entry.proxy.name),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -473,56 +492,328 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
     final colorScheme = Theme.of(context).colorScheme;
     final current = _currentNodeEntry();
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(28),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const NoticeBanner(),
+              const SizedBox(height: 96),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildActionCard(
+                      context,
+                      icon: Icons.location_on,
+                      title: current == null
+                          ? '未选择'
+                          : displayProxyName(current.proxy.name),
+                      subtitle: null,
+                      color: colorScheme.error,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildActionCard(
+                      context,
+                      icon: Icons.auto_awesome_motion,
+                      title: '智能分流',
+                      subtitle: null,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const XBoardConnectButton(isFloating: false),
+              const SizedBox(height: 18),
+              TextButton.icon(
+                onPressed: () => context.push('/plans'),
+                icon: const Icon(Icons.arrow_forward, size: 18),
+                label: const Text('购买会员'),
+              ),
+              const SizedBox(height: 12),
+              const XBoardOutboundMode(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopSubscriptionOverview(
+    BuildContext context,
+    DomainUser? userInfo,
+    SubscriptionInfo? profileSubscriptionInfo,
+  ) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final expiredAt = profileSubscriptionInfo?.expire != null &&
+            profileSubscriptionInfo!.expire != 0
+        ? DateTime.fromMillisecondsSinceEpoch(
+            profileSubscriptionInfo.expire * 1000,
+          )
+        : userInfo?.expiredAt;
+    final usedBytes = profileSubscriptionInfo != null
+        ? profileSubscriptionInfo.upload + profileSubscriptionInfo.download
+        : userInfo?.totalUsedBytes ?? 0;
+    final totalBytes =
+        profileSubscriptionInfo != null && profileSubscriptionInfo.total > 0
+            ? profileSubscriptionInfo.total
+            : userInfo?.transferLimit ?? 0;
+    final remainingBytes = totalBytes > usedBytes ? totalBytes - usedBytes : 0;
+    final remainingDays = expiredAt == null
+        ? null
+        : expiredAt.difference(DateTime.now()).inDays.clamp(0, 9999);
+    final usageRatio =
+        totalBytes <= 0 ? 0.0 : (usedBytes / totalBytes).clamp(0.0, 1.0);
+    final expiredText = expiredAt == null
+        ? '-'
+        : '${expiredAt.year.toString().padLeft(4, '0')}-'
+            '${expiredAt.month.toString().padLeft(2, '0')}-'
+            '${expiredAt.day.toString().padLeft(2, '0')}';
+    final isExpired = expiredAt != null && DateTime.now().isAfter(expiredAt);
+    final usedTraffic = _formatTrafficBytes(usedBytes);
+    final totalTraffic = _formatTrafficBytes(totalBytes);
+    final remainingTraffic = _formatTrafficBytes(remainingBytes);
+    final planName = (userInfo?.metadata['plan_name'] ??
+            userInfo?.metadata['planName'] ??
+            'FastVPN Plus')
+        .toString();
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+        ),
+      ),
       child: Column(
         children: [
-          const NoticeBanner(),
-          const Spacer(),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 360),
-            child: Column(
-              children: [
-                Row(
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.shield_outlined,
+                  color: colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: _buildActionCard(
-                        context,
-                        icon: Icons.location_on,
-                        title: current?.proxy.name ?? '未选择',
-                        subtitle: null,
-                        color: colorScheme.error,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            planName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer
+                                .withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            isExpired ? '已过期' : '使用中',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: colorScheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionCard(
-                        context,
-                        icon: Icons.auto_awesome_motion,
-                        title: '智能分流',
-                        subtitle: null,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      remainingDays == null ? '剩余 - 天' : '剩余 $remainingDays 天',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                const XBoardConnectButton(isFloating: false),
-                const SizedBox(height: 18),
-                TextButton.icon(
-                  onPressed: () => context.push('/plans'),
-                  icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: const Text('购买会员'),
+              ),
+              FilledButton.icon(
+                onPressed: () => context.push('/plans'),
+                icon: const Icon(Icons.auto_awesome, size: 16),
+                label: const Text('续费 / 升级'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 22),
+          Row(
+            children: [
+              Text(
+                '流量用量',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const Spacer(),
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: usedTraffic,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    TextSpan(
+                      text: ' / $totalTraffic',
+                      style: TextStyle(color: colorScheme.onSurfaceVariant),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                const XBoardOutboundMode(),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: usageRatio,
+              minHeight: 8,
+              backgroundColor:
+                  colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
             ),
           ),
-          const Spacer(),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDesktopSubscriptionMetric(
+                  context,
+                  icon: Icons.show_chart,
+                  label: '已用流量',
+                  value: usedTraffic,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildDesktopSubscriptionMetric(
+                  context,
+                  icon: Icons.file_download_outlined,
+                  label: '剩余流量',
+                  value: remainingTraffic,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildDesktopSubscriptionMetric(
+                  context,
+                  icon: Icons.calendar_today_outlined,
+                  label: '到期时间',
+                  value: expiredText,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildDesktopSubscriptionMetric(
+                  context,
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: '账户余额',
+                  value:
+                      '¥${(userInfo?.balanceInYuan ?? 0).toStringAsFixed(2)}',
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  Widget _buildDesktopSubscriptionMetric(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 84,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.7),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: colorScheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTrafficBytes(num bytes) {
+    if (bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var size = bytes.toDouble();
+    var unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+    if (size >= 100) {
+      return '${size.toStringAsFixed(0)} ${units[unitIndex]}';
+    }
+    if (size >= 10) {
+      return '${size.toStringAsFixed(1)} ${units[unitIndex]}';
+    }
+    return '${size.toStringAsFixed(2)} ${units[unitIndex]}';
   }
 
   Widget _buildActionCard(
@@ -577,8 +868,8 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
     required bool unavailable,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    final countryCode = _extractCountryCode(name);
-    final flag = countryCode == null ? null : _countryFlag(countryCode);
+    final countryCode = extractCountryCodeFromNodeName(name);
+    final flag = countryCode == null ? null : countryFlagEmoji(countryCode);
     final fallback = name
         .replaceAll(RegExp(r'^\[[^\]]+\]'), '')
         .trim()
@@ -609,42 +900,6 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
     );
   }
 
-  String? _extractCountryCode(String name) {
-    final normalized = name.toUpperCase();
-    final bracketMatch = RegExp(r'\]([A-Z]{2})(?:\s|$|\d)').firstMatch(
-      normalized,
-    );
-    final rawCode = bracketMatch?.group(1) ??
-        RegExp(r'\b([A-Z]{2})(?:\s|$|\d)').firstMatch(normalized)?.group(1);
-    if (rawCode == null) return null;
-    const supportedCodes = {
-      'HK',
-      'JP',
-      'SG',
-      'TW',
-      'US',
-      'KR',
-      'TH',
-      'FR',
-      'GB',
-      'UK',
-      'DE',
-      'NL',
-      'CA',
-      'AU',
-      'IN',
-      'RU',
-    };
-    return supportedCodes.contains(rawCode) ? rawCode : null;
-  }
-
-  String _countryFlag(String countryCode) {
-    final flagCode = countryCode == 'UK' ? 'GB' : countryCode;
-    return flagCode.codeUnits
-        .map((unit) => String.fromCharCode(0x1F1E6 + unit - 0x41))
-        .join();
-  }
-
   bool indexIsRecommended(_NodeEntry entry) {
     final nodes = _visibleNodes();
     final index = nodes.indexWhere((item) =>
@@ -661,13 +916,7 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
     for (final group in groups.where((group) => group.all.isNotEmpty)) {
       for (final proxy in group.all) {
         final name = proxy.name.trim();
-        if (name.isEmpty ||
-            groupNames.contains(name) ||
-            name.toUpperCase() == 'DIRECT' ||
-            name.toUpperCase() == 'REJECT' ||
-            name.contains('剩余流量') ||
-            name.contains('套餐到期') ||
-            name.contains('官网')) {
+        if (!_isDisplayableNodeName(name) || groupNames.contains(name)) {
           continue;
         }
         final key = name;
@@ -788,12 +1037,24 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
 
   bool _isDisplayableNodeName(String name) {
     final upper = name.toUpperCase();
+    const metadataKeywords = [
+      '剩余流量',
+      '已用流量',
+      '套餐到期',
+      '距离下次重置',
+      '下次重置',
+      '重置剩余',
+      '官网',
+      '本站',
+      '邀请返利',
+      '返利',
+      '过期时间',
+      '到期时间',
+    ];
     return name.isNotEmpty &&
         upper != 'DIRECT' &&
         upper != 'REJECT' &&
-        !name.contains('剩余流量') &&
-        !name.contains('套餐到期') &&
-        !name.contains('官网');
+        !metadataKeywords.any(name.contains);
   }
 
   Future<File?> _latestProfileFile() async {

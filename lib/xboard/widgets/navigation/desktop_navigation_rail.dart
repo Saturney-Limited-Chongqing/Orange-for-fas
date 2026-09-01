@@ -3,7 +3,8 @@ import 'package:fl_clash/xboard/features/online_support/providers/chat_provider.
 import 'package:fl_clash/xboard/features/online_support/pages/online_support_page.dart';
 import 'package:fl_clash/xboard/features/online_support/services/service_config.dart';
 import 'package:fl_clash/xboard/features/shared/shared.dart';
-import 'package:fl_clash/xboard/features/invite/widgets/user_menu_widget.dart';
+import 'package:fl_clash/xboard/features/invite/dialogs/logout_dialog.dart';
+import 'package:fl_clash/xboard/features/invite/dialogs/theme_dialog.dart';
 import 'package:fl_clash/xboard/features/invite/pages/invite_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -183,10 +184,10 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
     final appLocalizations = AppLocalizations.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
-        return SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.zero,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -219,6 +220,43 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
                           ),
                         ],
                       ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                SizedBox(
+                  height: 44,
+                  width: double.infinity,
+                  child: InkWell(
+                    onTap: _openUserMenu,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Row(
+                        mainAxisAlignment: _expanded
+                            ? MainAxisAlignment.start
+                            : MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.person,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          if (_expanded) ...[
+                            const SizedBox(width: 12),
+                            Flexible(
+                              child: Text(
+                                appLocalizations.userCenter,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -265,8 +303,6 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                const UserMenuWidget(),
               ],
             ),
           ),
@@ -303,6 +339,76 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
         ),
       ),
     );
+  }
+
+  Future<void> _openUserMenu() async {
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final offset = renderBox.localToGlobal(Offset.zero);
+    final appLocalizations = AppLocalizations.of(context);
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx + renderBox.size.width,
+        offset.dy + renderBox.size.height - 160,
+        offset.dx,
+        offset.dy,
+      ),
+      items: [
+        PopupMenuItem<String>(
+          value: 'invite',
+          child: Row(
+            children: [
+              const Icon(Icons.card_giftcard),
+              const SizedBox(width: 8),
+              Text(appLocalizations.invite),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'theme',
+          child: Row(
+            children: [
+              const Icon(Icons.brightness_6),
+              const SizedBox(width: 8),
+              Text(appLocalizations.switchTheme),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: 'logout',
+          child: Row(
+            children: [
+              const Icon(Icons.logout, color: Colors.red),
+              const SizedBox(width: 8),
+              Text(
+                appLocalizations.logout,
+                style: const TextStyle(color: Colors.red),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    if (!mounted || selected == null) return;
+    switch (selected) {
+      case 'invite':
+        _openInvite();
+        break;
+      case 'theme':
+        showDialog(
+          context: context,
+          builder: (context) => const ThemeDialog(),
+        );
+        break;
+      case 'logout':
+        showDialog(
+          context: context,
+          builder: (context) => const LogoutDialog(),
+        );
+        break;
+    }
   }
 
   /// 带未读标记的图标

@@ -145,7 +145,9 @@ class _ProxiesListViewState extends State<ProxiesListView> {
       if (isExpand) {
         final sortedProxies = globalState.appController.getSortProxies(
           group.all
-              .where((item) => item.name.toLowerCase().contains(query))
+              .where((item) =>
+                  item.name.toLowerCase().contains(query) ||
+                  displayProxyName(item.name).toLowerCase().contains(query))
               .toList(),
           group.testUrl,
         );
@@ -516,7 +518,7 @@ class _ListHeaderState extends State<ListHeader> {
                                             flex: 1,
                                             child: EmojiText(
                                               overflow: TextOverflow.ellipsis,
-                                              " · $proxyName",
+                                              " · ${displayProxyName(proxyName)}",
                                               style: context.textTheme
                                                   .labelMedium?.toLight,
                                             ),

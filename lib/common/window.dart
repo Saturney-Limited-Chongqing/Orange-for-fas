@@ -38,8 +38,7 @@ class Window {
 
     WindowOptions windowOptions = WindowOptions(
       size: Size(windowWidth, windowHeight),
-      minimumSize: Size(windowWidth, windowHeight), // 固定最小尺寸等于窗口尺寸
-      maximumSize: Size(windowWidth, windowHeight), // 固定最大尺寸等于窗口尺寸，禁用调整大小
+      minimumSize: const Size(800, 560),
     );
     if (!Platform.isMacOS || version > 10) {
       await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
@@ -77,7 +76,7 @@ class Window {
     }
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.setPreventClose(true);
-      await windowManager.setResizable(false); // 禁用窗口缩放
+      await windowManager.setResizable(true);
     });
   }
 

@@ -306,16 +306,8 @@ class _PlansViewState extends ConsumerState<PlansView> {
             final screenWidth = MediaQuery.of(context).size.width;
             final isDesktop = screenWidth > 768;
             if (isDesktop) {
-              final selectedPlan = _selectedPlan ??
-                  plans.firstWhere(
-                    (plan) => plan.hasPrice,
-                    orElse: () => plans.first,
-                  );
-              return PlanPurchasePage(
-                plan: selectedPlan,
-                embedded: true,
-                onBack: _backToPlans,
-              );
+              return _buildDesktopPlans(
+                  plans.where((plan) => plan.hasPrice).toList());
             } else {
               return ListView.builder(
                 itemCount: plans.length,
@@ -342,5 +334,151 @@ class _PlansViewState extends ConsumerState<PlansView> {
         child: scaffold,
       );
     }
+  }
+
+  Widget _buildDesktopPlans(List<DomainPlan> plans) {
+    if (plans.isEmpty) {
+      return const Center(
+        child: Text('暂无可购买套餐'),
+      );
+    }
+
+    final selectedPlan = _selectedPlan != null &&
+            plans.any((plan) => plan.id == _selectedPlan!.id)
+        ? _selectedPlan!
+        : plans.first;
+
+    if (_selectedPlan?.id != selectedPlan.id) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _selectedPlan = selectedPlan);
+        }
+      });
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 980),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '选择订阅套餐',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '先选择套餐，再选择该套餐支持的计费周期',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 18),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final useWrap = constraints.maxWidth < 720;
+                  final width = useWrap
+                      ? constraints.maxWidth
+                      : (constraints.maxWidth - 24) / 3;
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: plans
+                        .map(
+                          (plan) => SizedBox(
+                            width: width,
+                            child: _buildDesktopPlanOption(
+                              plan,
+                              selected: plan.id == selectedPlan.id,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              PlanPurchasePage(
+                key: ValueKey(selectedPlan.id),
+                plan: selectedPlan,
+                embedded: true,
+                onBack: _backToPlans,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopPlanOption(
+    DomainPlan plan, {
+    required bool selected,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: () => setState(() => _selectedPlan = plan),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        height: 132,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected
+                ? colorScheme.primary
+                : colorScheme.outlineVariant.withValues(alpha: 0.6),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    plan.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                ),
+                if (selected)
+                  Text(
+                    '已选',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              '起 ${_getLowestPrice(plan)}',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${AppLocalizations.of(context).xboardTraffic}: ${_formatTraffic(plan.transferQuota.toDouble())}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

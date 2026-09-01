@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:fl_clash/common/utils.dart';
+import 'package:fl_clash/common/proxy_display.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/state.dart';
@@ -86,7 +87,7 @@ class Tray {
         for (final proxy in group.all) {
           subMenuItems.add(
             MenuItem.checkbox(
-              label: proxy.name,
+              label: displayProxyName(proxy.name),
               checked: trayState.selectedMap[group.name] == proxy.name,
               onClick: (_) {
                 final appController = globalState.appController;

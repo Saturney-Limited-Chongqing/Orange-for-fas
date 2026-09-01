@@ -9,6 +9,7 @@ import '../models/payment_step.dart';
 
 // 初始化文件级日志器
 final _logger = FileLogger('payment_waiting_overlay.dart');
+
 class PaymentWaitingOverlay extends ConsumerStatefulWidget {
   final VoidCallback? onClose;
   final VoidCallback? onPaymentSuccess;
@@ -22,8 +23,10 @@ class PaymentWaitingOverlay extends ConsumerStatefulWidget {
     this.paymentUrl,
   });
   @override
-  ConsumerState<PaymentWaitingOverlay> createState() => _PaymentWaitingOverlayState();
+  ConsumerState<PaymentWaitingOverlay> createState() =>
+      _PaymentWaitingOverlayState();
 }
+
 class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   PaymentStep _currentStep = PaymentStep.cancelingOrders;
@@ -64,6 +67,7 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
     _pulseController.repeat(reverse: true);
     WidgetsBinding.instance.addObserver(this);
   }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -72,6 +76,7 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
     _pulseController.dispose();
     super.dispose();
   }
+
   void updateStep(PaymentStep step) {
     if (mounted) {
       setState(() {
@@ -82,6 +87,7 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
       }
     }
   }
+
   void updateTradeNo(String tradeNo) {
     if (mounted) {
       setState(() {
@@ -89,19 +95,20 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
       });
     }
   }
+
   void updatePaymentUrl(String paymentUrl) {
     if (mounted) {
-      setState(() {
-      });
+      setState(() {});
     }
   }
+
   void _startPaymentStatusCheck() {
     _logger.info('[PaymentWaiting] 开始定时检测支付状态，订单号: $_currentTradeNo');
     _paymentCheckTimer?.cancel();
-    
+
     // 立即执行一次检查
     _checkPaymentStatus();
-    
+
     _paymentCheckTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       _checkPaymentStatus();
     });
@@ -116,29 +123,30 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
     try {
       _logger.info('[PaymentWaiting] ===== 开始检测支付状态 =====');
       _logger.info('[PaymentWaiting] 订单号: $_currentTradeNo');
-      
+
       // 使用 SDK 检查订单状态
       final orderModels = await XBoardSDK.instance.order.getOrders();
       final orderData = orderModels.firstWhere(
         (o) => o.tradeNo == _currentTradeNo,
         orElse: () => const OrderModel(status: -1),
       );
-      
+
       _logger.info('[PaymentWaiting] API 调用完成，订单状态: ${orderData.status}');
-      
+
       if (orderData.status != -1) {
         // 检查订单状态
         // 状态值: 0=待付款, 1=开通中, 2=已取消, 3=已完成, 4=已折抵
         if (orderData.status == 3) {
           // 支付成功，立即执行成功回调
-          _logger.info('[PaymentWaiting] ===== 检测到支付成功！状态: ${orderData.status} =====');
+          _logger.info(
+              '[PaymentWaiting] ===== 检测到支付成功！状态: ${orderData.status} =====');
           _paymentCheckTimer?.cancel();
           if (mounted) {
             setState(() {
               _currentStep = PaymentStep.paymentSuccess;
             });
             _pulseController.stop();
-            
+
             // 立即执行成功回调
             if (widget.onPaymentSuccess != null) {
               widget.onPaymentSuccess?.call();
@@ -167,11 +175,13 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _logger.info('[PaymentWaiting] 应用回到前台，立即检测支付状态');
-      if (_currentStep == PaymentStep.waitingPayment && _currentTradeNo != null) {
+      if (_currentStep == PaymentStep.waitingPayment &&
+          _currentTradeNo != null) {
         _checkPaymentStatus();
       }
     }
   }
+
   String _getStepTitle(PaymentStep step) {
     switch (step) {
       case PaymentStep.cancelingOrders:
@@ -188,6 +198,7 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
         return AppLocalizations.of(context).xboardPaymentSuccess;
     }
   }
+
   String _getStepDescription(PaymentStep step) {
     switch (step) {
       case PaymentStep.cancelingOrders:
@@ -197,13 +208,16 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
       case PaymentStep.loadingPayment:
         return AppLocalizations.of(context).xboardPreparingPaymentPage;
       case PaymentStep.verifyPayment:
-        return AppLocalizations.of(context).xboardPaymentMethodVerifiedPreparing;
+        return AppLocalizations.of(context)
+            .xboardPaymentMethodVerifiedPreparing;
       case PaymentStep.waitingPayment:
         return '支付页面已打开，支付链接已复制到剪贴板。如果没有自动跳转，请手动粘贴到浏览器打开。';
       case PaymentStep.paymentSuccess:
-        return AppLocalizations.of(context).xboardCongratulationsSubscriptionActivated;
+        return AppLocalizations.of(context)
+            .xboardCongratulationsSubscriptionActivated;
     }
   }
+
   Color _getStepColor(PaymentStep step) {
     switch (step) {
       case PaymentStep.cancelingOrders:
@@ -220,6 +234,7 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
         return Colors.green;
     }
   }
+
   IconData _getStepIcon(PaymentStep step) {
     switch (step) {
       case PaymentStep.cancelingOrders:
@@ -236,6 +251,7 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
         return Icons.check_circle;
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -291,7 +307,10 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
                   _getStepDescription(_currentStep),
                   style: TextStyle(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.7),
                     height: 1.5,
                   ),
                   textAlign: TextAlign.center,
@@ -317,7 +336,8 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
               ],
             ),
             actions: () {
-              if (_currentStep == PaymentStep.paymentSuccess && widget.onPaymentSuccess != null) {
+              if (_currentStep == PaymentStep.paymentSuccess &&
+                  widget.onPaymentSuccess != null) {
                 return [
                   ElevatedButton(
                     onPressed: widget.onPaymentSuccess,
@@ -328,7 +348,8 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
                     child: Text(AppLocalizations.of(context).xboardConfirm),
                   ),
                 ];
-              } else if (_currentStep == PaymentStep.waitingPayment && widget.onClose != null) {
+              } else if (_currentStep == PaymentStep.waitingPayment &&
+                  widget.onClose != null) {
                 return [
                   TextButton(
                     onPressed: widget.onClose,
@@ -344,6 +365,7 @@ class _PaymentWaitingOverlayState extends ConsumerState<PaymentWaitingOverlay>
     );
   }
 }
+
 class PaymentWaitingManager {
   static OverlayEntry? _overlayEntry;
   static GlobalKey<_PaymentWaitingOverlayState>? _overlayKey;
@@ -356,12 +378,15 @@ class PaymentWaitingManager {
     String? tradeNo,
   }) {
     _logger.debug('[PaymentWaitingManager.show] 准备显示支付等待弹窗');
-    _logger.debug('[PaymentWaitingManager.show] onClose 是否为 null: ${onClose == null}');
-    _logger.debug('[PaymentWaitingManager.show] onPaymentSuccess 是否为 null: ${onPaymentSuccess == null}');
+    _logger.debug(
+        '[PaymentWaitingManager.show] onClose 是否为 null: ${onClose == null}');
+    _logger.debug(
+        '[PaymentWaitingManager.show] onPaymentSuccess 是否为 null: ${onPaymentSuccess == null}');
     hide(); // 确保之前的overlay被清除
     _onClose = onClose;
     _onPaymentSuccess = onPaymentSuccess;
-    _logger.debug('[PaymentWaitingManager.show] 静态变量已设置，_onPaymentSuccess 是否为 null: ${_onPaymentSuccess == null}');
+    _logger.debug(
+        '[PaymentWaitingManager.show] 静态变量已设置，_onPaymentSuccess 是否为 null: ${_onPaymentSuccess == null}');
     _overlayKey = GlobalKey<_PaymentWaitingOverlayState>();
     _overlayEntry = OverlayEntry(
       builder: (context) => PaymentWaitingOverlay(
@@ -374,7 +399,8 @@ class PaymentWaitingManager {
           _logger.debug('[PaymentWaitingManager] 收到支付成功通知，准备处理');
           // 先保存回调，再隐藏弹窗（因为hide()会清空回调）
           final callback = _onPaymentSuccess;
-          _logger.debug('[PaymentWaitingManager] 保存的回调是否为 null: ${callback == null}');
+          _logger.debug(
+              '[PaymentWaitingManager] 保存的回调是否为 null: ${callback == null}');
           hide();
           _logger.debug('[PaymentWaitingManager] 弹窗已隐藏，准备调用外部回调');
           if (callback != null) {
@@ -388,22 +414,40 @@ class PaymentWaitingManager {
         tradeNo: tradeNo,
       ),
     );
-    Overlay.of(context).insert(_overlayEntry!);
+    final overlayState =
+        Navigator.maybeOf(context, rootNavigator: true)?.overlay ??
+            Overlay.maybeOf(context, rootOverlay: true);
+    if (overlayState == null) {
+      _logger.error('[PaymentWaitingManager.show] 未找到可用 Overlay');
+      _overlayEntry = null;
+      _overlayKey = null;
+      _onClose = null;
+      _onPaymentSuccess = null;
+      return;
+    }
+    overlayState.insert(_overlayEntry!);
   }
+
   static void updateStep(PaymentStep step) {
     _overlayKey?.currentState?.updateStep(step);
   }
+
   static void updateTradeNo(String tradeNo) {
     _overlayKey?.currentState?.updateTradeNo(tradeNo);
   }
+
   static void updatePaymentUrl(String paymentUrl) {
     _overlayKey?.currentState?.updatePaymentUrl(paymentUrl);
   }
+
   static void hide() {
-    _overlayEntry?.remove();
+    final overlayEntry = _overlayEntry;
     _overlayEntry = null;
     _overlayKey = null;
     _onClose = null;
     _onPaymentSuccess = null;
+    if (overlayEntry?.mounted ?? false) {
+      overlayEntry?.remove();
+    }
   }
 }

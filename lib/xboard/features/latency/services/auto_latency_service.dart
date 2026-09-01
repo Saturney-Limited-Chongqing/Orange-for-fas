@@ -433,9 +433,11 @@ class AutoLatencyService {
         } else {
           final realName = group.getCurrentSelectedName(selectedProxyName);
           if (realName != selectedProxyName &&
-              group.all.any((p) => p.name == realName)) {
+              group.all.any((p) => p.name == realName) &&
+              _isDisplayableName(realName)) {
             realNodeName = realName;
-          } else if (group.all.any((p) => p.name == selectedProxyName)) {
+          } else if (group.all.any((p) => p.name == selectedProxyName) &&
+              _isDisplayableName(selectedProxyName)) {
             realNodeName = selectedProxyName;
           } else {
             realNodeName = _firstDisplayableProxyName(group);
@@ -484,14 +486,32 @@ class AutoLatencyService {
   bool _isDisplayableProxy(Proxy proxy) {
     final groups = _ref?.read(groupsProvider);
     final name = proxy.name.trim();
-    final upper = name.toUpperCase();
-    return name.isNotEmpty &&
+    return _isDisplayableName(name) &&
         !(groups?.any((group) => group.name == name) ?? false) &&
+        true;
+  }
+
+  bool _isDisplayableName(String name) {
+    final trimmed = name.trim();
+    final upper = trimmed.toUpperCase();
+    const metadataKeywords = [
+      '剩余流量',
+      '已用流量',
+      '套餐到期',
+      '距离下次重置',
+      '下次重置',
+      '重置剩余',
+      '官网',
+      '本站',
+      '邀请返利',
+      '返利',
+      '过期时间',
+      '到期时间',
+    ];
+    return trimmed.isNotEmpty &&
         upper != 'DIRECT' &&
         upper != 'REJECT' &&
-        !name.contains('剩余流量') &&
-        !name.contains('套餐到期') &&
-        !name.contains('官网');
+        !metadataKeywords.any(trimmed.contains);
   }
 
   Group? _getCurrentGroup() {

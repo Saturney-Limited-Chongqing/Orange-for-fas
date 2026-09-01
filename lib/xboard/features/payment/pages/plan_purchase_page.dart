@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:fl_clash/l10n/l10n.dart';
+import 'package:fl_clash/state.dart';
 import 'package:fl_clash/xboard/domain/domain.dart';
 import 'package:flutter_xboard_sdk/flutter_xboard_sdk.dart'
     show XBoardSDK, CouponModel;
@@ -76,6 +77,23 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
   void dispose() {
     _couponController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant PlanPurchasePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.plan.id != widget.plan.id) {
+      final periods = _getAvailablePeriods(context);
+      _selectedPeriod = periods.isEmpty ? null : periods.first['period'];
+      _clearCouponData();
+    } else {
+      final periods = _getAvailablePeriods(context);
+      final periodKeys = periods.map((period) => period['period']).toSet();
+      if (_selectedPeriod != null && !periodKeys.contains(_selectedPeriod)) {
+        _selectedPeriod = periods.isEmpty ? null : periods.first['period'];
+        _clearCouponData();
+      }
+    }
   }
 
   // ========== 数据加载 ==========
@@ -286,57 +304,53 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
   // ========== 购买流程 ==========
 
   Future<void> _proceedToPurchase() async {
-    if (_selectedPeriod == null) {
-      XBoardNotification.showError(
-          AppLocalizations.of(context).xboardPleaseSelectPaymentPeriod);
+    final selectedPeriod = _selectedPeriod;
+    final flowContext = globalState.navigatorKey.currentContext ?? context;
+    final l10n = AppLocalizations.of(flowContext);
+    final paymentNotifier = ref.read(xboardPaymentProvider.notifier);
+    final paymentMethods = ref.read(xboardAvailablePaymentMethodsProvider);
+    final displayFinalPrice = _finalPrice ?? _getCurrentPrice();
+    final userBalance = _userBalance;
+    final couponCode = _couponCode;
+
+    if (selectedPeriod == null) {
+      XBoardNotification.showError(l10n.xboardPleaseSelectPaymentPeriod);
       return;
     }
 
     try {
       String? tradeNo;
-      _logger
-          .debug('[购买] 开始购买流程，套餐ID: ${widget.plan.id}, 周期: $_selectedPeriod');
+      _logger.debug('[购买] 开始购买流程，套餐ID: ${widget.plan.id}, 周期: $selectedPeriod');
 
       // 显示支付等待页面
-      if (mounted) {
-        _showPaymentWaiting(null);
-        PaymentWaitingManager.updateStep(PaymentStep.cancelingOrders);
-      }
+      _showPaymentWaiting(flowContext, null);
+      PaymentWaitingManager.updateStep(PaymentStep.cancelingOrders);
 
       // 创建订单
       _logger.debug('[购买] 创建订单');
       PaymentWaitingManager.updateStep(PaymentStep.createOrder);
 
-      final paymentNotifier = ref.read(xboardPaymentProvider.notifier);
       tradeNo = await paymentNotifier.createOrder(
         planId: widget.plan.id,
-        period: _selectedPeriod!,
-        couponCode: _couponCode,
+        period: selectedPeriod,
+        couponCode: couponCode,
       );
 
       if (tradeNo == null) {
-        final errorMessage = ref.read(userUIStateProvider).errorMessage;
-        throw Exception(
-            '${AppLocalizations.of(context).xboardOrderCreationFailed}: $errorMessage');
+        throw Exception(l10n.xboardOrderCreationFailed);
       }
 
       _logger.debug('[购买] 订单创建成功: $tradeNo');
       PaymentWaitingManager.updateTradeNo(tradeNo);
 
       // 计算实付金额
-      final displayFinalPrice = _finalPrice ?? _getCurrentPrice();
-      final balanceToUse = _userBalance != null && _userBalance! > 0
-          ? (_userBalance! > displayFinalPrice
-              ? displayFinalPrice
-              : _userBalance!)
+      final balanceToUse = userBalance != null && userBalance > 0
+          ? (userBalance > displayFinalPrice ? displayFinalPrice : userBalance)
           : 0.0;
       final actualPayAmount = displayFinalPrice - balanceToUse;
 
       _logger.debug(
           '[购买] 实付金额: $actualPayAmount (优惠后价格: $displayFinalPrice, 余额抵扣: $balanceToUse)');
-
-      // 使用 xboardAvailablePaymentMethodsProvider 获取支付方式
-      final paymentMethods = ref.read(xboardAvailablePaymentMethodsProvider);
 
       _logger.info('[购买] 获取到的支付方式数量: ${paymentMethods.length}');
       if (paymentMethods.isNotEmpty) {
@@ -359,30 +373,28 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
         _logger.debug('[购买] 实付金额为0，自动选择第一个支付方式');
         selectedMethod = paymentMethods.first;
         // 显示支付等待页面
-        if (mounted) {
-          _showPaymentWaiting(tradeNo);
-        }
+        _showPaymentWaiting(flowContext, tradeNo);
       } else {
         // 需要实际支付，让用户选择支付方式
-        selectedMethod = await _selectPaymentMethod(paymentMethods, tradeNo);
+        selectedMethod =
+            await _selectPaymentMethod(flowContext, paymentMethods, tradeNo);
         if (selectedMethod == null) return;
       }
 
       // 提交支付
-      await _submitPayment(tradeNo, selectedMethod);
+      await _submitPayment(
+          flowContext, paymentNotifier, tradeNo, selectedMethod);
     } catch (e) {
       _logger.error('购买流程出错: $e');
-      if (mounted) {
-        PaymentWaitingManager.hide();
-        XBoardNotification.showError('操作失败: ${e.toString()}');
-      }
+      PaymentWaitingManager.hide();
+      XBoardNotification.showError('操作失败: ${e.toString()}');
     }
   }
 
-  void _showPaymentWaiting(String? tradeNo) {
+  void _showPaymentWaiting(BuildContext flowContext, String? tradeNo) {
     PaymentWaitingManager.show(
-      context,
-      onClose: () => Navigator.of(context).pop(),
+      flowContext,
+      onClose: () => Navigator.of(flowContext).pop(),
       onPaymentSuccess: _handlePaymentSuccess,
       tradeNo: tradeNo,
     );
@@ -414,22 +426,20 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
   }
 
   Future<DomainPaymentMethod?> _selectPaymentMethod(
+    BuildContext flowContext,
     List<DomainPaymentMethod> methods,
     String tradeNo,
   ) async {
     if (methods.length == 1) {
       // 单一支付方式，直接显示等待页面并返回
-      if (mounted) {
-        _showPaymentWaiting(tradeNo);
-      }
+      _showPaymentWaiting(flowContext, tradeNo);
       return methods.first;
     }
 
     PaymentWaitingManager.hide();
-    if (!mounted) return null;
 
     final selected = await PaymentMethodSelectorDialog.show(
-      context,
+      flowContext,
       paymentMethods: methods,
     );
 
@@ -438,20 +448,21 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
       return null;
     }
 
-    if (mounted) {
-      _showPaymentWaiting(tradeNo);
-    }
+    _showPaymentWaiting(flowContext, tradeNo);
 
     return selected;
   }
 
   Future<void> _submitPayment(
-      String tradeNo, DomainPaymentMethod method) async {
+    BuildContext flowContext,
+    XBoardPaymentNotifier paymentNotifier,
+    String tradeNo,
+    DomainPaymentMethod method,
+  ) async {
     _logger.debug('[支付] 提交支付: $tradeNo, 方式: ${method.id}');
     PaymentWaitingManager.updateStep(PaymentStep.loadingPayment);
     PaymentWaitingManager.updateStep(PaymentStep.verifyPayment);
 
-    final paymentNotifier = ref.read(xboardPaymentProvider.notifier);
     final paymentResult = await paymentNotifier.submitPayment(
       tradeNo: tradeNo,
       method: method.id.toString(),
@@ -460,8 +471,6 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
     if (paymentResult == null) {
       throw Exception('支付失败: 支付请求返回空结果');
     }
-
-    if (!mounted) return;
 
     final paymentType = paymentResult['type'] as int? ?? 0;
     final paymentData = paymentResult['data'];
@@ -484,7 +493,7 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
         paymentData.isNotEmpty) {
       // 付费订单，data 是支付URL（String）
       PaymentWaitingManager.updateStep(PaymentStep.waitingPayment);
-      await _launchPaymentUrl(paymentData, tradeNo);
+      await _launchPaymentUrl(flowContext, paymentData, tradeNo);
     } else {
       throw Exception(
           '支付失败: 未获取到有效的支付数据 (type=$paymentType, data=$paymentData)');
@@ -518,10 +527,9 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
     }
   }
 
-  Future<void> _launchPaymentUrl(String url, String tradeNo) async {
+  Future<void> _launchPaymentUrl(
+      BuildContext flowContext, String url, String tradeNo) async {
     try {
-      if (!mounted) return;
-
       await Clipboard.setData(ClipboardData(text: url));
       final uri = Uri.parse(url);
 
@@ -540,10 +548,8 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
 
       _logger.debug('[支付] 支付页面已在浏览器中打开: $tradeNo');
     } catch (e) {
-      if (mounted) {
-        PaymentWaitingManager.hide();
-        XBoardNotification.showError('打开支付页面失败: ${e.toString()}');
-      }
+      PaymentWaitingManager.hide();
+      XBoardNotification.showError('打开支付页面失败: ${e.toString()}');
     }
   }
 
@@ -557,144 +563,145 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
         Platform.isLinux || Platform.isWindows || Platform.isMacOS;
     final colorScheme = Theme.of(context).colorScheme;
 
+    final form = Padding(
+      padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppLocalizations.of(context).xboardSelectPaymentPeriod,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '选择最适合您的计费周期',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final useWrap = constraints.maxWidth < 660;
+              final cards = periods
+                  .map(
+                    (period) => SizedBox(
+                      width: useWrap
+                          ? constraints.maxWidth
+                          : (constraints.maxWidth - 24) / 3,
+                      child: _buildBillingCard(
+                        context,
+                        period,
+                        selected: _selectedPeriod == period['period'],
+                      ),
+                    ),
+                  )
+                  .toList();
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: cards,
+              );
+            },
+          ),
+          const SizedBox(height: 16),
+          if (periods.isEmpty)
+            Text(
+              AppLocalizations.of(context).xboardNoAvailablePlan,
+              style: TextStyle(color: colorScheme.onSurfaceVariant),
+            ),
+
+          // 确认购买按钮
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: Consumer(
+              builder: (context, ref, child) {
+                final paymentState = ref.watch(userUIStateProvider);
+                return ElevatedButton(
+                  onPressed: paymentState.isLoading ? null : _proceedToPurchase,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade600,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: paymentState.isLoading
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              AppLocalizations.of(context).xboardProcessing,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          AppLocalizations.of(context).xboardBuyNow,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 28),
+          Text(
+            '套餐特性',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 14),
+          ..._buildFeatureTexts(context).map(
+            (feature) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.check,
+                    size: 16,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      feature,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
     final content = Align(
       alignment: Alignment.topCenter,
       child: ConstrainedBox(
         constraints: const BoxConstraints(
           maxWidth: 820,
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AppLocalizations.of(context).xboardSelectPaymentPeriod,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '选择最适合您的计费周期',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 20),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final useWrap = constraints.maxWidth < 660;
-                  final cards = periods
-                      .map(
-                        (period) => SizedBox(
-                          width: useWrap
-                              ? constraints.maxWidth
-                              : (constraints.maxWidth - 24) / 3,
-                          child: _buildBillingCard(
-                            context,
-                            period,
-                            selected: _selectedPeriod == period['period'],
-                          ),
-                        ),
-                      )
-                      .toList();
-                  return Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: cards,
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              if (periods.isEmpty)
-                Text(
-                  AppLocalizations.of(context).xboardNoAvailablePlan,
-                  style: TextStyle(color: colorScheme.onSurfaceVariant),
-                ),
-
-              // 确认购买按钮
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: Consumer(
-                  builder: (context, ref, child) {
-                    final paymentState = ref.watch(userUIStateProvider);
-                    return ElevatedButton(
-                      onPressed:
-                          paymentState.isLoading ? null : _proceedToPurchase,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade600,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: paymentState.isLoading
-                          ? Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  AppLocalizations.of(context).xboardProcessing,
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ],
-                            )
-                          : Text(
-                              AppLocalizations.of(context).xboardBuyNow,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0,
-                              ),
-                            ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 28),
-              Text(
-                '套餐特性',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 14),
-              ..._buildFeatureTexts(context).map(
-                (feature) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.check,
-                        size: 16,
-                        color: colorScheme.primary,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          feature,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        child: widget.embedded ? form : SingleChildScrollView(child: form),
       ),
     );
 
