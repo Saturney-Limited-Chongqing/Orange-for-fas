@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:country_flags/country_flags.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -901,7 +902,6 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
       );
     }
     final countryCode = extractCountryCodeFromNodeName(name);
-    final flag = countryCode == null ? null : countryFlagEmoji(countryCode);
     final fallback = name
         .replaceAll(RegExp(r'^\[[^\]]+\]'), '')
         .trim()
@@ -912,21 +912,37 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
 
     return Opacity(
       opacity: unavailable ? 0.45 : 1,
-      child: CircleAvatar(
-        radius: 15,
-        backgroundColor: flag == null
-            ? colorScheme.primaryContainer
-            : colorScheme.surfaceContainerHighest,
-        child: Text(
-          flag ?? (fallback.isEmpty ? '?' : fallback),
-          style: TextStyle(
-            color: flag == null
-                ? colorScheme.onPrimaryContainer
-                : colorScheme.onSurface,
-            fontSize: flag == null ? 11 : 18,
-            fontWeight: FontWeight.w800,
-            height: 1,
-          ),
+      child: countryCode == null
+          ? CircleAvatar(
+              radius: 15,
+              backgroundColor: colorScheme.primaryContainer,
+              child: Text(
+                fallback.isEmpty ? '?' : fallback,
+                style: TextStyle(
+                  color: colorScheme.onPrimaryContainer,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+            )
+          : _buildFlagAvatar(countryCode),
+    );
+  }
+
+  Widget _buildFlagAvatar(String countryCode) {
+    final normalizedCode = normalizeCountryCode(countryCode);
+    if (normalizedCode == null) {
+      return const SizedBox.shrink();
+    }
+    return SizedBox.square(
+      dimension: 30,
+      child: CountryFlag.fromCountryCode(
+        normalizedCode,
+        theme: const ImageTheme(
+          width: 30,
+          height: 30,
+          shape: Circle(),
         ),
       ),
     );
