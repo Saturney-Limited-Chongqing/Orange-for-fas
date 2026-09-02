@@ -119,8 +119,16 @@ install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
 
 # libclash.so
 set(CLASH_DIR "../libclash/linux")
-install(PROGRAMS "${CLASH_DIR}/FastVPNCore" DESTINATION "${BUILD_BUNDLE_DIR}"
-  COMPONENT Runtime)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${CLASH_DIR}/FastVPNCore")
+  install(PROGRAMS "${CLASH_DIR}/FastVPNCore" DESTINATION "${BUILD_BUNDLE_DIR}"
+    COMPONENT Runtime)
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${CLASH_DIR}/FlClashCore")
+  install(PROGRAMS "${CLASH_DIR}/FlClashCore" DESTINATION "${BUILD_BUNDLE_DIR}"
+    RENAME "FastVPNCore"
+    COMPONENT Runtime)
+else()
+  message(FATAL_ERROR "Missing Linux core binary: expected FastVPNCore or FlClashCore in ${CLASH_DIR}")
+endif()
 
 foreach(bundled_library ${PLUGIN_BUNDLED_LIBRARIES})
   install(FILES "${bundled_library}"
