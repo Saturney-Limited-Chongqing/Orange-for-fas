@@ -658,6 +658,12 @@ class AppController {
   }
 
   _handlerDisclaimer() async {
+    if (!globalState.isPre) {
+      _ref.read(appSettingProvider.notifier).updateState(
+            (state) => state.copyWith(disclaimerAccepted: true),
+          );
+      return;
+    }
     if (_ref.read(appSettingProvider).disclaimerAccepted) {
       return;
     }
