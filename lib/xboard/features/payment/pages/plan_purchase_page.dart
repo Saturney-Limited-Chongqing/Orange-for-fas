@@ -554,8 +554,9 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
   Future<void> _launchPaymentUrl(
       BuildContext flowContext, String url, String tradeNo) async {
     try {
-      await Clipboard.setData(ClipboardData(text: url));
-      final uri = Uri.parse(url);
+      final launchUrlText = await _buildAuthenticatedPaymentUrl(url);
+      await Clipboard.setData(ClipboardData(text: launchUrlText));
+      final uri = Uri.parse(launchUrlText);
 
       if (!await canLaunchUrl(uri)) {
         throw Exception('无法打开支付链接');
@@ -575,6 +576,59 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
       PaymentWaitingManager.hide();
       XBoardNotification.showError('打开支付页面失败: ${e.toString()}');
     }
+  }
+
+  Future<String> _buildAuthenticatedPaymentUrl(String url) async {
+    final redirect = _extractLoginRedirect(url);
+    if (redirect == null || redirect.isEmpty) {
+      return url;
+    }
+
+    try {
+      final result = await XBoardSDK.instance.httpService.postRequest(
+        '/api/v1/user/getQuickLoginUrl',
+        const {},
+      );
+      final quickLoginUrl = result['data'] as String?;
+      if (quickLoginUrl == null || quickLoginUrl.isEmpty) {
+        return url;
+      }
+      return _replaceLoginRedirect(quickLoginUrl, redirect);
+    } catch (e) {
+      _logger.debug('[支付] 生成网页自动登录链接失败，使用原支付链接: $e');
+      return url;
+    }
+  }
+
+  String? _extractLoginRedirect(String url) {
+    try {
+      final uri = Uri.parse(url);
+      final fragment = uri.fragment;
+      if (fragment.isEmpty) {
+        return null;
+      }
+      final fragmentUri = Uri.parse(fragment);
+      if (!fragmentUri.path.endsWith('/login')) {
+        return null;
+      }
+      return fragmentUri.queryParameters['redirect'];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _replaceLoginRedirect(String loginUrl, String redirect) {
+    final uri = Uri.parse(loginUrl);
+    final fragmentUri = Uri.parse(uri.fragment);
+    final queryParameters = Map<String, String>.from(
+      fragmentUri.queryParameters,
+    );
+    queryParameters['redirect'] = redirect;
+
+    final nextFragment = fragmentUri.replace(
+      queryParameters: queryParameters,
+    );
+    return uri.replace(fragment: nextFragment.toString()).toString();
   }
 
   // ========== UI 构建 ==========
