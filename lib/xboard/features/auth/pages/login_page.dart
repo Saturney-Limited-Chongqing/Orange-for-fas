@@ -84,11 +84,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ConfigFileLoader.readEnvironmentValue('TEST_PASSWORD');
 
       _emailController.text =
-          savedEmail?.isNotEmpty == true ? savedEmail! : testAccount ?? '';
+          (savedEmail?.isNotEmpty == true ? savedEmail! : testAccount ?? '')
+              .trim();
       _passwordController.text =
-          savedPassword?.isNotEmpty == true && rememberPassword
-              ? savedPassword!
-              : testPassword ?? '';
+          (savedPassword?.isNotEmpty == true && rememberPassword
+                  ? savedPassword!
+                  : testPassword ?? '')
+              .trim();
       _rememberPassword = rememberPassword;
       if (mounted) {
         setState(() {});
@@ -100,22 +102,24 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
       final userNotifier = ref.read(xboardUserProvider.notifier);
       final success = await userNotifier.login(
-        _emailController.text,
-        _passwordController.text,
+        email,
+        password,
       );
       if (mounted) {
         if (success) {
           if (_rememberPassword) {
             await _storageService.saveCredentials(
-              _emailController.text,
-              _passwordController.text,
+              email,
+              password,
               true,
             );
           } else {
             await _storageService.saveCredentials(
-              _emailController.text,
+              email,
               '',
               false,
             );
