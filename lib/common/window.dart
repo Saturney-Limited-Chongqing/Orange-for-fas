@@ -9,6 +9,7 @@ import 'package:window_manager/window_manager.dart';
 class Window {
   init(int version) async {
     final props = globalState.config.windowProps;
+    const fixedWindowSize = Size(1175, 780);
     final acquire = await singleInstanceLock.acquire();
     if (!acquire) {
       debugPrint('[Window] Another FastVPN instance is already running.');
@@ -21,24 +22,10 @@ class Window {
     }
     await windowManager.ensureInitialized();
 
-    // 获取主屏幕信息
-    final primaryDisplay = await screenRetriever.getPrimaryDisplay();
-    final screenSize = primaryDisplay.size;
-
-    // 计算合适的窗口尺寸
-    // 1. 如果配置的尺寸小于屏幕的60%，使用配置的尺寸
-    // 2. 如果配置的尺寸过大，则使用屏幕的60%（留出足够空间给任务栏和其他窗口）
-    final maxWidth = screenSize.width * 0.55;
-    final maxHeight = screenSize.height * 0.55;
-
-    final windowWidth =
-        props.width > maxWidth ? maxWidth : props.width.toDouble();
-    final windowHeight =
-        props.height > maxHeight ? maxHeight : props.height.toDouble();
-
     WindowOptions windowOptions = WindowOptions(
-      size: Size(windowWidth, windowHeight),
-      minimumSize: const Size(800, 560),
+      size: fixedWindowSize,
+      minimumSize: fixedWindowSize,
+      maximumSize: fixedWindowSize,
     );
     if (!Platform.isMacOS || version > 10) {
       await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
@@ -76,7 +63,10 @@ class Window {
     }
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.setPreventClose(true);
-      await windowManager.setResizable(true);
+      await windowManager.setResizable(false);
+      await windowManager.setMaximizable(false);
+      await windowManager.setMinimizable(true);
+      await windowManager.setClosable(true);
     });
   }
 

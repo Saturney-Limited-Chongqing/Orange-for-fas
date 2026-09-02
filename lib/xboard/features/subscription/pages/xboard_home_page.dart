@@ -491,59 +491,47 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
   Widget _buildDesktopActionPanel(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final current = _currentNodeEntry();
+    const connectButtonBottomGap = 96.0;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 28, 28, 8),
+      padding: const EdgeInsets.fromLTRB(28, 28, 28, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const NoticeBanner(),
-          const SizedBox(height: 32),
+          const SizedBox(height: 48),
           Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildActionCard(
-                                  context,
-                                  icon: Icons.location_on,
-                                  title: current == null
-                                      ? '未选择'
-                                      : displayProxyName(current.proxy.name),
-                                  subtitle: null,
-                                  color: colorScheme.error,
-                                  selected: current != null && !current.isAuto,
-                                  onTap: current == null || current.isAuto
-                                      ? null
-                                      : () => _selectNode(current),
-                                ),
-                              ),
-                              const SizedBox(width: 35),
-                              const Expanded(child: XBoardOutboundMode()),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          const XBoardConnectButton(
-                            isFloating: false,
-                            horizontalPadding: 0,
-                          ),
-                        ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionCard(
+                        context,
+                        icon: Icons.location_on,
+                        title: current == null
+                            ? '未选择'
+                            : displayProxyName(current.proxy.name),
+                        subtitle: null,
+                        color: colorScheme.error,
+                        selected: current != null && !current.isAuto,
+                        onTap: current == null || current.isAuto
+                            ? null
+                            : () => _selectNode(current),
                       ),
                     ),
-                  ),
-                );
-              },
+                    const SizedBox(width: 35),
+                    const Expanded(child: XBoardOutboundMode()),
+                  ],
+                ),
+                const Spacer(),
+                const XBoardConnectButton(
+                  isFloating: false,
+                  horizontalPadding: 0,
+                ),
+                const SizedBox(height: connectButtonBottomGap),
+              ],
             ),
           ),
         ],

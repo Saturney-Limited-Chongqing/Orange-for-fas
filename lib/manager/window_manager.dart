@@ -163,89 +163,14 @@ class WindowHeader extends StatefulWidget {
 }
 
 class _WindowHeaderState extends State<WindowHeader> {
-  final isMaximizedNotifier = ValueNotifier<bool>(false);
-  final isPinNotifier = ValueNotifier<bool>(false);
-
-  @override
-  void initState() {
-    super.initState();
-    _initNotifier();
-  }
-
-  _initNotifier() async {
-    isMaximizedNotifier.value = await windowManager.isMaximized();
-    isPinNotifier.value = await windowManager.isAlwaysOnTop();
-  }
-
-  @override
-  void dispose() {
-    isMaximizedNotifier.dispose();
-    isPinNotifier.dispose();
-    super.dispose();
-  }
-
-  _updateMaximized() async {
-    final isMaximized = await windowManager.isMaximized();
-    switch (isMaximized) {
-      case true:
-        await windowManager.unmaximize();
-        break;
-      case false:
-        await windowManager.maximize();
-        break;
-    }
-    isMaximizedNotifier.value = await windowManager.isMaximized();
-  }
-
-  _updatePin() async {
-    final isAlwaysOnTop = await windowManager.isAlwaysOnTop();
-    await windowManager.setAlwaysOnTop(!isAlwaysOnTop);
-    isPinNotifier.value = await windowManager.isAlwaysOnTop();
-  }
-
   _buildActions() {
     return Row(
       children: [
-        IconButton(
-          onPressed: () async {
-            _updatePin();
-          },
-          icon: ValueListenableBuilder(
-            valueListenable: isPinNotifier,
-            builder: (_, value, ___) {
-              return value
-                  ? const Icon(
-                      Icons.push_pin,
-                    )
-                  : const Icon(
-                      Icons.push_pin_outlined,
-                    );
-            },
-          ),
-        ),
         IconButton(
           onPressed: () {
             windowManager.minimize();
           },
           icon: const Icon(Icons.remove),
-        ),
-        IconButton(
-          onPressed: () async {
-            _updateMaximized();
-          },
-          icon: ValueListenableBuilder(
-            valueListenable: isMaximizedNotifier,
-            builder: (_, value, ___) {
-              return value
-                  ? const Icon(
-                      Icons.filter_none,
-                      size: 20,
-                    )
-                  : const Icon(
-                      Icons.crop_square,
-                    );
-            },
-          ),
         ),
         IconButton(
           onPressed: () {
@@ -270,9 +195,6 @@ class _WindowHeaderState extends State<WindowHeader> {
             child: GestureDetector(
               onPanStart: (_) {
                 windowManager.startDragging();
-              },
-              onDoubleTap: () {
-                _updateMaximized();
               },
               child: Container(
                 color: context.colorScheme.secondary.opacity15,
