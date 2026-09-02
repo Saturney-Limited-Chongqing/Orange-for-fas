@@ -64,7 +64,6 @@ xboard:
       api_encrypted: Mozilla/5.0 (compatible; YOUR_ENCRYPTED_STRING_HERE)
       
       # 域名竞速测试 UA
-      domain_racing_test: FlClash/1.0 (Domain Racing Test)
+      domain_racing_test: FastVPN/1.0 (Domain Racing Test)
     
-
 

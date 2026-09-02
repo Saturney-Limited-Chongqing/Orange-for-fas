@@ -1,14 +1,14 @@
-display_name: Flclash
+display_name: FastVPN
 
 icon: ./assets/images/logo.png
 
 keywords:
-  - Flclash
+  - FastVPN
   - Clash
   - ClashMeta
   - Proxy
 
-generic_name: Flclash
+generic_name: FastVPN
 
 categories:
   - Network

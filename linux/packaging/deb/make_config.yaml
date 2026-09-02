@@ -1,5 +1,5 @@
-display_name: Flclash
-package_name: Flclash
+display_name: FastVPN
+package_name: FastVPN
 maintainer:
   name: chen08209
   email: chen08209@gmail.com
@@ -17,12 +17,12 @@ dependencies:
   - libsoup-3.0-0
 
 keywords:
-  - Flclash
+  - FastVPN
   - Clash
   - ClashMeta
   - Proxy
 
-generic_name: Flclash
+generic_name: FastVPN
 
 categories:
   - Network

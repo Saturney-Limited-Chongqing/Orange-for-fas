@@ -116,7 +116,7 @@ class AboutView extends ConsumerWidget {
           title: const Text("Telegram"),
           onTap: () {
             globalState.openUrl(
-              "https://t.me/FlClash",
+              "https://fasvpn.com",
             );
           },
           trailing: const Icon(Icons.launch),
@@ -125,7 +125,7 @@ class AboutView extends ConsumerWidget {
           title: Text(appLocalizations.project),
           onTap: () {
             globalState.openUrl(
-              "https://github.com/$repository",
+              "https://fasvpn.com",
             );
           },
           trailing: const Icon(Icons.launch),
@@ -134,7 +134,7 @@ class AboutView extends ConsumerWidget {
           title: Text(appLocalizations.core),
           onTap: () {
             globalState.openUrl(
-              "https://github.com/Saturney-Limited-Chongqing/clashmeta/tree/FlClash",
+              "https://fasvpn.com",
             );
           },
           trailing: const Icon(Icons.launch),

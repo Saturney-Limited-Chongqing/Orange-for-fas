@@ -1,4 +1,4 @@
-display_name: Flclash
+display_name: FastVPN
 
 packager: chen08209
 packagerEmail: chen08209@gmail.com
@@ -15,12 +15,12 @@ dependencies:
   - libsoup-3_0-0
 
 keywords:
-  - Flclash
+  - FastVPN
   - Clash
   - ClashMeta
   - Proxy
 
-generic_name: Flclash
+generic_name: FastVPN
 
 group: Applications/Internet
 

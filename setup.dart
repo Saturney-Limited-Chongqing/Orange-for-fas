@@ -132,9 +132,9 @@ class Build {
         ),
       ];
 
-  static String get appName => "Flclash";
+  static String get appName => "FastVPN";
 
-  static String get coreName => "FlClashCore";
+  static String get coreName => "FastVPNCore";
 
   static String get libName => "libclash";
 
@@ -309,7 +309,7 @@ class Build {
     final targetPath = join(
       outDir,
       target.name,
-      "FlClashHelperService${target.executableExtensionName}",
+      "FastVPNHelperService${target.executableExtensionName}",
     );
     await File(outPath).copy(targetPath);
   }
