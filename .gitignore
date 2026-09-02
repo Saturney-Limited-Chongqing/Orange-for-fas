@@ -12,7 +12,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-
+windows_dist/
 # IntelliJ related
 *.iml
 *.ipr
