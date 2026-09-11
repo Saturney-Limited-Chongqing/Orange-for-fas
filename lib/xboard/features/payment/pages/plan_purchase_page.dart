@@ -15,6 +15,7 @@ import 'package:fl_clash/xboard/features/payment/providers/xboard_payment_provid
 import '../widgets/payment_waiting_overlay.dart';
 import '../widgets/payment_method_selector_dialog.dart';
 import '../models/payment_step.dart';
+import '../utils/payment_web_url.dart';
 import '../utils/price_calculator.dart';
 
 // 初始化文件级日志器
@@ -579,9 +580,11 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
   }
 
   Future<String> _buildAuthenticatedPaymentUrl(String url) async {
-    final redirect = _extractLoginRedirect(url);
+    // 支付回调/回跳等网页流量统一指向支付站点，API 仍走面板地址
+    final paymentUrl = PaymentWebUrl.rewrite(url);
+    final redirect = _extractLoginRedirect(paymentUrl);
     if (redirect == null || redirect.isEmpty) {
-      return url;
+      return paymentUrl;
     }
 
     try {
@@ -591,12 +594,15 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
       );
       final quickLoginUrl = result['data'] as String?;
       if (quickLoginUrl == null || quickLoginUrl.isEmpty) {
-        return url;
+        return paymentUrl;
       }
-      return _replaceLoginRedirect(quickLoginUrl, redirect);
+      return _replaceLoginRedirect(
+        PaymentWebUrl.rewrite(quickLoginUrl),
+        redirect,
+      );
     } catch (e) {
       _logger.debug('[支付] 生成网页自动登录链接失败，使用原支付链接: $e');
-      return url;
+      return paymentUrl;
     }
   }
 

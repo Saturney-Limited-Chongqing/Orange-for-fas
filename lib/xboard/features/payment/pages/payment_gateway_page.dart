@@ -5,6 +5,7 @@ import 'package:fl_clash/xboard/utils/xboard_notification.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_xboard_sdk/flutter_xboard_sdk.dart';
+import '../utils/payment_web_url.dart';
 class PaymentGatewayPage extends ConsumerStatefulWidget {
   final String paymentUrl;
   final String tradeNo;
@@ -47,7 +48,7 @@ class _PaymentGatewayPageState extends ConsumerState<PaymentGatewayPage> {
   }
   Future<void> _launchPaymentUrl({bool isAutomatic = false}) async {
     try {
-      final uri = Uri.parse(widget.paymentUrl);
+      final uri = Uri.parse(PaymentWebUrl.rewrite(widget.paymentUrl));
       if (!await canLaunchUrl(uri)) {
         throw Exception('无法打开支付链接: ${widget.paymentUrl}');
       }

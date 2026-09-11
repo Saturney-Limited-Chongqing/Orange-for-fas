@@ -2,7 +2,7 @@ script_template: inno_setup.iss
 app_id: 728B3532-C74B-4870-9068-BE70FE12A3E6
 app_name: FastVPN
 publisher: chen08209
-publisher_url: https://fasvpn.com
+publisher_url: https://c3be4fbc-dae1-44f3-a82e-1a622b239df7.sumpoolbox.org
 display_name: FastVPN
 executable_name: FastVPN.exe
 output_base_file_name: FastVPN.exe

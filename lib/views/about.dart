@@ -116,7 +116,7 @@ class AboutView extends ConsumerWidget {
           title: const Text("Telegram"),
           onTap: () {
             globalState.openUrl(
-              "https://fasvpn.com",
+              "https://c3be4fbc-dae1-44f3-a82e-1a622b239df7.sumpoolbox.org",
             );
           },
           trailing: const Icon(Icons.launch),
@@ -125,7 +125,7 @@ class AboutView extends ConsumerWidget {
           title: Text(appLocalizations.project),
           onTap: () {
             globalState.openUrl(
-              "https://fasvpn.com",
+              "https://c3be4fbc-dae1-44f3-a82e-1a622b239df7.sumpoolbox.org",
             );
           },
           trailing: const Icon(Icons.launch),
@@ -134,7 +134,7 @@ class AboutView extends ConsumerWidget {
           title: Text(appLocalizations.core),
           onTap: () {
             globalState.openUrl(
-              "https://fasvpn.com",
+              "https://c3be4fbc-dae1-44f3-a82e-1a622b239df7.sumpoolbox.org",
             );
           },
           trailing: const Icon(Icons.launch),
