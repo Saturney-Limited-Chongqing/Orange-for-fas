@@ -56,7 +56,7 @@ Caddy 用于国内中转、UA 验证和响应混淆。
 :8888 {
   # UA 验证：只允许携带特定密钥的请求
   @authorized {
-    header User-Agent *RmxDbGFzaC1XdWppZS1BUEkvMS4w*
+    header User-Agent "Mozilla/5.0 FSClient/1.0"
   }
   
   handle @authorized {
@@ -70,7 +70,7 @@ Caddy 用于国内中转、UA 验证和响应混淆。
 ```
 
 **说明：**
-- `RmxDbGFzaC1XdWppZS1BUEkvMS4w` 是 Base64 编码的密钥
+- `Mozilla/5.0 FSClient/1.0` 是客户端统一 User-Agent
 - 需要与客户端配置中的 `api_encrypted` UA 一致
 - 不匹配的请求返回 403
 
@@ -111,7 +111,7 @@ Caddy 用于国内中转、UA 验证和响应混淆。
 # 面板服务（带 UA 验证和响应混淆）
 :8888 {
   @authorized {
-    header User-Agent *RmxDbGFzaC1XdWppZS1BUEkvMS4w*
+    header User-Agent "Mozilla/5.0 FSClient/1.0"
   }
   
   handle @authorized {
@@ -399,4 +399,3 @@ app.listen(3000);
 ---
 
 **需要帮助？** 提交 [Issue](https://github.com/hakimi-x/Xboard-Mihomo/issues)
-

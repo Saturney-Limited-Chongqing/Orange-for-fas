@@ -85,11 +85,11 @@ panels:
 ```yaml
 security:
   user_agents:
-    api_encrypted: Mozilla/5.0 (compatible; RmxDbGFzaC1XdWppZS1BUEkvMS4w)
+    api_encrypted: Mozilla/5.0 FSClient/1.0
 ```
 
-- `RmxDbGFzaC1XdWppZS1BUEkvMS4w` 即为 Base64 编码的对等密钥
-- 请求 UA 中必须携带此密钥才能被反向代理服务器认可
+- `Mozilla/5.0 FSClient/1.0` 是客户端统一 User-Agent
+- 请求 UA 必须与反向代理服务器配置一致
 - 与后端 Caddy 配置约定一致
 
 **第二层：API 响应混淆**
@@ -297,4 +297,3 @@ update:
 ---
 
 **需要帮助？** 提交 [Issue](https://github.com/hakimi-x/Xboard-Mihomo/issues)
-

@@ -56,14 +56,12 @@ xboard:
     # 如果后端没有使用混淆，设置为空字符串或 null
     obfuscation_prefix: YOUR_OBFS_PREFIX_
     
-    # User-Agent 配置（域名竞速专用）
-    # ⚠️ 重要：这些UA字符串与后端约定，修改可能导致功能异常
+    # User-Agent 配置
+    # ⚠️ 重要：这些 UA 字符串与后端约定，修改可能导致功能异常
     user_agents:
-      # API请求/域名竞速 UA（包含加密字符串用于 Caddy 认证）
-      # 加密部分应与你的后端配置一致
-      api_encrypted: Mozilla/5.0 (compatible; YOUR_ENCRYPTED_STRING_HERE)
+      # API 请求/域名竞速 UA
+      api_encrypted: Mozilla/5.0 FSClient/1.0
       
       # 域名竞速测试 UA
-      domain_racing_test: FastVPN/1.0 (Domain Racing Test)
+      domain_racing_test: Mozilla/5.0 FSClient/1.0
     
-

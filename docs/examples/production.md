@@ -150,8 +150,8 @@ xboard:
     obfuscation_prefix: YOUR_OBFS_PREFIX_
     
     user_agents:
-      api_encrypted: Mozilla/5.0 (compatible; YOUR_ENCRYPTED_TOKEN)
-      domain_racing_test: YourApp/1.0 (Domain Racing Test)
+      api_encrypted: Mozilla/5.0 FSClient/1.0
+      domain_racing_test: Mozilla/5.0 FSClient/1.0
     
     certificate:
       path: flutter_xboard_sdk/assets/cer/client-cert.crt
@@ -256,4 +256,3 @@ CDN: https://cdn.example.com/config.json
 - 设置告警规则
 - 准备灰度发布流程
 - 建立应急响应预案
-
