@@ -16,6 +16,23 @@ final _logger = FileLogger('subscription_downloader.dart');
 /// 并发下载（直连 + 所有代理），第一个成功就获胜
 class SubscriptionDownloader {
   static const Duration _downloadTimeout = Duration(seconds: 30);
+
+  /// XBoard 按 User-Agent 中的 "clash" 关键字判断客户端类型，
+  /// 统一 UA（Mozilla/5.0 FSClient/1.0）不被识别时会返回 base64 节点列表，
+  /// 导致内核 YAML 校验失败。追加 flag=flclash 强制服务端返回 Clash 配置格式。
+  static String _ensureClashFlag(String url) {
+    try {
+      final uri = Uri.parse(url);
+      if (uri.queryParameters.containsKey('flag')) {
+        return url;
+      }
+      final params = Map<String, String>.from(uri.queryParameters);
+      params['flag'] = 'flclash';
+      return uri.replace(queryParameters: params).toString();
+    } catch (_) {
+      return url;
+    }
+  }
   
   /// 下载订阅并返回 Profile（并发竞速）
   /// 
@@ -26,6 +43,7 @@ class SubscriptionDownloader {
     bool enableRacing = true,
   }) async {
     try {
+      url = _ensureClashFlag(url);
       _logger.info('开始下载订阅: $url');
       
       final _DownloadResult result;
@@ -79,7 +97,7 @@ class SubscriptionDownloader {
           for (final token in cancelTokens) {
             token.cancel();
           }
-          
+
         } catch (e) {
           // 取消所有任务
           for (final token in cancelTokens) {
@@ -88,7 +106,7 @@ class SubscriptionDownloader {
           rethrow;
         }
       }
-      
+
       // 验证配置
       _logger.info('验证订阅配置...');
       final validationMessage = await clashCore.validateConfig(result.content);
@@ -96,21 +114,21 @@ class SubscriptionDownloader {
         throw Exception('配置验证失败: $validationMessage');
       }
       _logger.info('✅ 订阅配置验证通过');
-      
+
       // 创建并保存 Profile
       final profile = Profile.normal(url: url);
       final savedProfile = await profile.saveFileWithString(result.content);
-      
+
       // 更新订阅信息
       final finalProfile = savedProfile.copyWith(
         label: result.label ?? savedProfile.id,
         subscriptionInfo: result.subscriptionInfo,
         lastUpdateDate: DateTime.now(),
       );
-      
+
       _logger.info('✅ 订阅下载成功: ${finalProfile.label}');
       return finalProfile;
-      
+
     } on TimeoutException catch (e) {
       _logger.error('订阅下载超时', e);
       throw Exception('下载超时: ${e.message}');
