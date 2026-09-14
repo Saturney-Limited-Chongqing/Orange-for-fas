@@ -39,6 +39,13 @@ macos_dist/
 # Generated files (build_runner, freezed, etc.)
 *.g.dart
 *.freezed.dart
+# 生成文件已提交入库，保证全新 clone 无需本机跑 build_runner 即可构建
+!lib/models/generated/**
+!lib/providers/generated/**
+!lib/xboard/adapter/state/generated/**
+!lib/xboard/adapter/initialization/generated/**
+!lib/xboard/domain/models/generated/**
+!lib/xboard/features/initialization/models/generated/**
 
 # Symbolication related
 app.*.symbols
@@ -70,3 +77,6 @@ assets/config/xboard.config.yaml
 
 # 忽略证书文件
 assets/cer/
+!assets/cer/.gitkeep
+# Widget Preview related
+.widget_preview/
