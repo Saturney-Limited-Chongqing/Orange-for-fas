@@ -1,13 +1,13 @@
 [submodule "core/Clash.Meta"]
 	path = core/Clash.Meta
-	url = https://github.com/Saturney-Limited-Chongqing/clashmeta.git
+	url = ../clashmeta.git
 	branch = FlClash
 [submodule "plugins/flutter_distributor"]
 	path = plugins/flutter_distributor
-	url = https://github.com/Saturney-Limited-Chongqing/flutter_distributor-fasvpn.git
+	url = ../flutter_distributor-fasvpn.git
 	branch = FlClash
 
 
 [submodule "lib/sdk/flutter_xboard_sdk"]
 	path = lib/sdk/flutter_xboard_sdk
-	url = https://github.com/Saturney-Limited-Chongqing/orange-fas-sdk.git
+	url = ../orange-fas-sdk.git
