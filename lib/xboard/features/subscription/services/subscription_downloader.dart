@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:fl_clash/clash/core.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/xboard/config/legacy_url_rewriter.dart';
 import 'package:fl_clash/xboard/config/xboard_config.dart';
 import 'package:fl_clash/xboard/core/core.dart';
 import 'package:fl_clash/xboard/infrastructure/http/user_agent_config.dart';
@@ -43,7 +44,7 @@ class SubscriptionDownloader {
     bool enableRacing = true,
   }) async {
     try {
-      url = _ensureClashFlag(url);
+      url = _ensureClashFlag(LegacyUrlRewriter.rewrite(url));
       _logger.info('开始下载订阅: $url');
       
       final _DownloadResult result;

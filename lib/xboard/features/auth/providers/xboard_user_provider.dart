@@ -3,6 +3,7 @@ import 'package:fl_clash/xboard/features/auth/auth.dart';
 import 'package:fl_clash/xboard/services/services.dart';
 import 'package:fl_clash/xboard/features/profile/providers/profile_import_provider.dart';
 import 'package:fl_clash/xboard/core/core.dart';
+import 'package:fl_clash/xboard/config/legacy_url_rewriter.dart';
 import 'package:fl_clash/xboard/domain/domain.dart';
 import 'package:flutter_xboard_sdk/flutter_xboard_sdk.dart'
     hide XBoardException;
@@ -544,7 +545,7 @@ DomainUser _mapUser(UserModel user) {
 
 DomainSubscription _mapSubscription(SubscriptionModel sub) {
   return DomainSubscription(
-    subscribeUrl: sub.subscribeUrl ?? '',
+    subscribeUrl: LegacyUrlRewriter.rewrite(sub.subscribeUrl ?? ''),
     email: sub.email ?? '',
     uuid: sub.uuid ?? '',
     planId: sub.planId ?? 0,

@@ -10,6 +10,7 @@ import 'package:fl_clash/xboard/domain/domain.dart';
 import 'package:flutter_xboard_sdk/flutter_xboard_sdk.dart'
     show XBoardSDK, CouponModel;
 import 'package:fl_clash/xboard/core/core.dart';
+import 'package:fl_clash/xboard/config/legacy_url_rewriter.dart';
 import 'package:fl_clash/xboard/features/auth/providers/xboard_user_provider.dart';
 import 'package:fl_clash/xboard/features/payment/providers/xboard_payment_provider.dart';
 import '../widgets/payment_waiting_overlay.dart';
@@ -580,8 +581,9 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
   }
 
   Future<String> _buildAuthenticatedPaymentUrl(String url) async {
-    // 支付回调/回跳等网页流量统一指向支付站点，API 仍走面板地址
-    final paymentUrl = PaymentWebUrl.rewrite(url);
+    // 旧域名统一换成当前面板地址；支付回调/回跳网页再指向支付站点
+    final paymentUrl =
+        PaymentWebUrl.rewrite(LegacyUrlRewriter.rewrite(url));
     final redirect = _extractLoginRedirect(paymentUrl);
     if (redirect == null || redirect.isEmpty) {
       return paymentUrl;
@@ -597,7 +599,7 @@ class _PlanPurchasePageState extends ConsumerState<PlanPurchasePage> {
         return paymentUrl;
       }
       return _replaceLoginRedirect(
-        PaymentWebUrl.rewrite(quickLoginUrl),
+        PaymentWebUrl.rewrite(LegacyUrlRewriter.rewrite(quickLoginUrl)),
         redirect,
       );
     } catch (e) {
