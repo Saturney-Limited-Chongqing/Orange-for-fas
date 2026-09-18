@@ -17,6 +17,13 @@ final _logger = FileLogger('domain_racing_service.dart');
 class DomainRacingService {
   static const Duration _connectionTimeout = Duration(seconds: 5);
   static const Duration _responseTimeout = Duration(seconds: 8);
+
+  /// 单个测试任务的兜底总超时。
+  ///
+  /// HttpClient.connectionTimeout 不覆盖 DNS 解析阶段，系统解析器挂起时
+  /// `client.getUrl()` 可能长时间不返回，导致竞速 completer 永不完成、
+  /// 登录页无限转圈。此总超时保证每个测试任务必然有结果。
+  static const Duration _taskHardTimeout = Duration(seconds: 18);
   
   /// 设置证书路径（由配置加载器调用）
   static void setCertificatePath(String path) {
@@ -96,13 +103,22 @@ class DomainRacingService {
       // 测试直连
       final directToken = CancelToken();
       cancelTokens.add(directToken);
-      futures.add(_testSingleDomain(domain, testPath, directToken, taskIndex++, useProxy: false));
-      
+      futures.add(_withHardTimeout(
+        _testSingleDomain(domain, testPath, directToken, taskIndex++, useProxy: false),
+        domain,
+        useProxy: false,
+      ));
+
       // 测试所有代理
       for (final proxyUrl in proxies) {
         final proxyToken = CancelToken();
         cancelTokens.add(proxyToken);
-        futures.add(_testSingleDomain(domain, testPath, proxyToken, taskIndex++, useProxy: true, proxyUrl: proxyUrl));
+        futures.add(_withHardTimeout(
+          _testSingleDomain(domain, testPath, proxyToken, taskIndex++, useProxy: true, proxyUrl: proxyUrl),
+          domain,
+          useProxy: true,
+          proxyUrl: proxyUrl,
+        ));
       }
     }
 
@@ -180,6 +196,25 @@ class DomainRacingService {
     }
   }
 
+  /// 为单个测试任务加兜底超时，保证竞速 completer 不会被悬挂的任务卡死
+  static Future<DomainTestResult> _withHardTimeout(
+    Future<DomainTestResult> future,
+    String domain, {
+    required bool useProxy,
+    String? proxyUrl,
+  }) {
+    return future.timeout(
+      _taskHardTimeout,
+      onTimeout: () => DomainTestResult.failure(
+        domain,
+        '任务总超时（含DNS阶段，${_taskHardTimeout.inSeconds}s兜底）',
+        _taskHardTimeout.inMilliseconds,
+        useProxy: useProxy,
+        proxyUrl: proxyUrl,
+      ),
+    );
+  }
+
   /// 测试单个域名
   static Future<DomainTestResult> _testSingleDomain(
     String domain,
@@ -243,7 +278,14 @@ class DomainRacingService {
       client.connectionTimeout = _connectionTimeout;
 
       final uri = Uri.parse(testUrl);
-      final request = await client.getUrl(uri);
+      // connectionTimeout 不覆盖 DNS 解析，这里单独兜底
+      final request = await client.getUrl(uri).timeout(
+        _connectionTimeout * 2,
+        onTimeout: () {
+          client.close(force: true);
+          throw TimeoutException('DNS解析/建立连接超时', _connectionTimeout * 2);
+        },
+      );
 
       // 设置请求头
       if (_isIpWithPort(withoutProtocol)) {

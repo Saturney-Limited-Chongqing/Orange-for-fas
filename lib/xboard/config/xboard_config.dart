@@ -215,12 +215,12 @@ class XBoardConfig {
   static Future<String?> getFastestPanelUrl() async {
     // 如果已经有正在进行的竞速，直接返回该结果（请求合并）
     if (_racingFuture != null) {
-      return _racingFuture;
+      return _boundRacing(_racingFuture!);
     }
 
     final panelUrls = allPanelUrls;
     if (panelUrls.isEmpty) return null;
-    
+
     // 获取所有代理
     final proxyUrls = allProxyUrls;
 
@@ -241,7 +241,16 @@ class XBoardConfig {
       _racingFuture = null;
     });
 
-    return _racingFuture;
+    return _boundRacing(_racingFuture!);
+  }
+
+  /// 竞速整体兜底超时：任何未知原因导致竞速悬挂时，按时返回 null，
+  /// 避免登录页初始化无限转圈。
+  static Future<String?> _boundRacing(Future<String?> future) {
+    return future.timeout(const Duration(seconds: 25), onTimeout: () {
+      _racingFuture = null;
+      return null;
+    });
   }
   
   /// 获取第一个代理URL

@@ -44,9 +44,14 @@ class DomainStatusService {
     try {
       _logger.info('开始检查域名状态');
 
-      // 使用竞速方式获取最优域名信息
+      // 使用竞速方式获取最优域名信息（失败自动重试一次）
       final startTime = DateTime.now();
-      final bestDomain = await XBoardConfig.getFastestPanelUrl();
+      var bestDomain = await XBoardConfig.getFastestPanelUrl();
+      if (bestDomain == null || bestDomain.isEmpty) {
+        _logger.warning('首次竞速失败，2秒后重试一次');
+        await Future.delayed(const Duration(seconds: 2));
+        bestDomain = await XBoardConfig.getFastestPanelUrl();
+      }
       final availableDomains = XBoardConfig.allPanelUrls;
       final endTime = DateTime.now();
       final latency = endTime.difference(startTime).inMilliseconds;
@@ -57,7 +62,7 @@ class DomainStatusService {
         await _initializeXBoardService(bestDomain);
 
         _logger.info('域名检查成功: $bestDomain (${latency}ms)');
-        
+
         return {
           'success': true,
           'domain': bestDomain,
@@ -66,6 +71,20 @@ class DomainStatusService {
           'message': null,
         };
       } else {
+        // 竞速全部失败：回退到配置文件中的面板地址，
+        // 让登录请求仍然可以尝试（健康检查端点可能被单独拦截）
+        final fallback = XBoardConfig.panelUrl;
+        if (fallback != null && fallback.isNotEmpty) {
+          _logger.warning('竞速失败，回退到配置的面板地址: $fallback');
+          await _initializeXBoardService(fallback);
+          return {
+            'success': true,
+            'domain': fallback,
+            'latency': latency,
+            'availableDomains': availableDomains,
+            'message': null,
+          };
+        }
         _logger.warning('未找到可用域名');
         return {
           'success': false,

@@ -237,6 +237,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 48),
+                    if (initState.status == InitializationStatus.failed) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.errorContainer,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error_outline,
+                                size: 18, color: colorScheme.onErrorContainer),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                appLocalizations.xboardNetworkConnectionFailed,
+                                style: TextStyle(
+                                    color: colorScheme.onErrorContainer),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () => ref
+                                  .read(initializationProvider.notifier)
+                                  .refresh(),
+                              child: Text(appLocalizations.xboardRetry),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                     XBInputField(
                       controller: _emailController,
                       labelText: appLocalizations.xboardEmail,

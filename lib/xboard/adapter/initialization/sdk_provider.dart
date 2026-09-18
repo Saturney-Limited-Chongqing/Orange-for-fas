@@ -39,7 +39,14 @@ Future<XBoardSDK> xboardSdk(Ref ref) async {
     }
     
     if (fastestUrl == null) {
-      throw Exception('域名竞速失败：所有面板域名都无法连接');
+      // 竞速全部失败：回退到配置文件中的面板地址，让登录仍可尝试
+      final fallback = XBoardConfig.panelUrl;
+      if (fallback != null && fallback.isNotEmpty) {
+        _logger.warning('[XBoardSdkProvider] 竞速失败，回退到配置面板地址: $fallback');
+        fastestUrl = fallback;
+      } else {
+        throw Exception('域名竞速失败：所有面板域名都无法连接');
+      }
     }
     
     _logger.info('[XBoardSdkProvider] 使用域名: $fastestUrl');
