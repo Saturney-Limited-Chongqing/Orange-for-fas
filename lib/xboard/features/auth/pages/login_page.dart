@@ -27,7 +27,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   // 从配置文件加载的应用信息
   String _appTitle = 'XBoard';
-  String _appWebsite = 'example.com';
 
   @override
   void initState() {
@@ -40,14 +39,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _initializeXBoard();
   }
 
-  /// 加载应用信息（标题和网站）
+  /// 加载应用信息（标题）
   Future<void> _loadAppInfo() async {
     final title = await ConfigFileLoaderHelper.getAppTitle();
-    final website = await ConfigFileLoaderHelper.getAppWebsite();
     if (mounted) {
       setState(() {
         _appTitle = title;
-        _appWebsite = website;
       });
     }
   }
@@ -224,13 +221,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             style: textTheme.displaySmall?.copyWith(
                               color: colorScheme.onSurface,
                               fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _appWebsite,
-                            style: textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],

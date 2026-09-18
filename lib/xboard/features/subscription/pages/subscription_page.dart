@@ -134,31 +134,6 @@ class _SubscriptionPageState extends ConsumerState<SubscriptionPage> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            '订阅链接:',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: Text(
-                              _subscriptionUrl!,
-                              style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
                           Row(
                             children: [
                               Expanded(
