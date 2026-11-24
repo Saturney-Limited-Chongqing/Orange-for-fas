@@ -1,7 +1,8 @@
 import 'package:fl_clash/l10n/l10n.dart';
-import 'package:fl_clash/xboard/features/online_support/providers/chat_provider.dart';
-import 'package:fl_clash/xboard/features/online_support/pages/online_support_page.dart';
-import 'package:fl_clash/xboard/features/online_support/services/service_config.dart';
+// 客服模块已注释
+// import 'package:fl_clash/xboard/features/online_support/providers/chat_provider.dart';
+// import 'package:fl_clash/xboard/features/online_support/pages/online_support_page.dart';
+// import 'package:fl_clash/xboard/features/online_support/services/service_config.dart';
 import 'package:fl_clash/xboard/features/shared/shared.dart';
 import 'package:fl_clash/xboard/features/invite/dialogs/logout_dialog.dart';
 import 'package:fl_clash/xboard/features/invite/dialogs/theme_dialog.dart';
@@ -30,11 +31,12 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
 
   @override
   Widget build(BuildContext context) {
-    final chatState = !CustomerSupportServiceConfig.isCrisp &&
-            CustomerSupportServiceConfig.apiBaseUrl != null &&
-            CustomerSupportServiceConfig.wsBaseUrl != null
-        ? ref.watch(chatProvider)
-        : const ChatState();
+    // 客服未读状态已注释
+    // final chatState = !CustomerSupportServiceConfig.isCrisp &&
+    //         CustomerSupportServiceConfig.apiBaseUrl != null &&
+    //         CustomerSupportServiceConfig.wsBaseUrl != null
+    //     ? ref.watch(chatProvider)
+    //     : const ChatState();
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
 
@@ -75,7 +77,7 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
               SafeArea(
                 top: false,
                 minimum: const EdgeInsets.only(bottom: 8),
-                child: _buildBottomActions(colorScheme, chatState),
+                child: _buildBottomActions(colorScheme),
               ),
             ],
           ),
@@ -85,21 +87,22 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
   }
 
   /// 分隔线
-  Widget _buildDivider(ColorScheme colorScheme) {
-    return Container(
-      width: 40,
-      height: 1,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.transparent,
-            colorScheme.outline.withValues(alpha: 0.3),
-            Colors.transparent,
-          ],
-        ),
-      ),
-    );
-  }
+  // 分隔线（仅客服入口使用，已注释）
+  // Widget _buildDivider(ColorScheme colorScheme) {
+  //   return Container(
+  //     width: 40,
+  //     height: 1,
+  //     decoration: BoxDecoration(
+  //       gradient: LinearGradient(
+  //         colors: [
+  //           Colors.transparent,
+  //           colorScheme.outline.withValues(alpha: 0.3),
+  //           Colors.transparent,
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   /// 导航项
   Widget _buildNavigationItems(
@@ -180,7 +183,7 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
   }
 
   /// 底部功能区
-  Widget _buildBottomActions(ColorScheme colorScheme, ChatState chatState) {
+  Widget _buildBottomActions(ColorScheme colorScheme) {
     final appLocalizations = AppLocalizations.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -260,49 +263,50 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 6),
-                _buildDivider(colorScheme),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: _openSupport,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    height: 44,
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: _expanded
-                          ? MainAxisAlignment.start
-                          : MainAxisAlignment.center,
-                      children: [
-                        _buildIconWithBadge(
-                          Icon(
-                            Icons.support_agent_outlined,
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                          chatState.unreadCount,
-                        ),
-                        if (_expanded) ...[
-                          const SizedBox(width: 12),
-                          Flexible(
-                            child: Text(
-                              appLocalizations.onlineSupport,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
+                // 客服入口已注释
+                // const SizedBox(height: 6),
+                // _buildDivider(colorScheme),
+                // const SizedBox(height: 8),
+                // InkWell(
+                //   onTap: _openSupport,
+                //   borderRadius: BorderRadius.circular(8),
+                //   child: Container(
+                //     height: 44,
+                //     margin: const EdgeInsets.symmetric(horizontal: 6),
+                //     padding: const EdgeInsets.symmetric(horizontal: 10),
+                //     decoration: BoxDecoration(
+                //       borderRadius: BorderRadius.circular(8),
+                //     ),
+                //     child: Row(
+                //       mainAxisAlignment: _expanded
+                //           ? MainAxisAlignment.start
+                //           : MainAxisAlignment.center,
+                //       children: [
+                //         _buildIconWithBadge(
+                //           Icon(
+                //             Icons.support_agent_outlined,
+                //             color: colorScheme.onSurfaceVariant,
+                //           ),
+                //           chatState.unreadCount,
+                //         ),
+                //         if (_expanded) ...[
+                //           const SizedBox(width: 12),
+                //           Flexible(
+                //             child: Text(
+                //               appLocalizations.onlineSupport,
+                //               maxLines: 1,
+                //               overflow: TextOverflow.ellipsis,
+                //               style: TextStyle(
+                //                 color: colorScheme.onSurfaceVariant,
+                //                 fontWeight: FontWeight.w400,
+                //               ),
+                //             ),
+                //           ),
+                //         ],
+                //       ],
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -311,18 +315,19 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
     );
   }
 
-  Future<void> _openSupport() async {
-    if (CustomerSupportServiceConfig.isCrisp) {
-      final error = await openCrispSupportWindow();
-      if (error != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
-      }
-      return;
-    }
-    widget.onDestinationSelected(2);
-  }
+  // 客服入口已注释
+  // Future<void> _openSupport() async {
+  //   if (CustomerSupportServiceConfig.isCrisp) {
+  //     final error = await openCrispSupportWindow();
+  //     if (error != null && mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text(error)),
+  //       );
+  //     }
+  //     return;
+  //   }
+  //   widget.onDestinationSelected(2);
+  // }
 
   void _openInvite() {
     showDialog(
@@ -412,12 +417,13 @@ class _DesktopNavigationRailState extends ConsumerState<DesktopNavigationRail> {
   }
 
   /// 带未读标记的图标
-  Widget _buildIconWithBadge(Widget icon, int count) {
-    if (count == 0) return icon;
-
-    return BadgeIcon(
-      icon: icon,
-      count: count,
-    );
-  }
+  // 客服未读角标已注释
+  // Widget _buildIconWithBadge(Widget icon, int count) {
+  //   if (count == 0) return icon;
+  //
+  //   return BadgeIcon(
+  //     icon: icon,
+  //     count: count,
+  //   );
+  // }
 }

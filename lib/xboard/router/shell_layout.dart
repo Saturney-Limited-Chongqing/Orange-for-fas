@@ -27,9 +27,10 @@ class AdaptiveShellLayout extends ConsumerWidget {
         case 1:
           context.go('/plans');
           break;
-        case 2:
-          context.go('/support');
-          break;
+        // 客服入口已注释
+        // case 2:
+        //   context.go('/support');
+        //   break;
       }
     } else {
       // 移动端路由：首页、邀请
@@ -52,14 +53,14 @@ class AdaptiveShellLayout extends ConsumerWidget {
       // 桌面端导航栏索引：首页(0)、套餐(1)、客服(2)
       if (location == '/') return 0;
       if (location.startsWith('/plans')) return 1;
-      if (location.startsWith('/support')) return 2;
+      // if (location.startsWith('/support')) return 2;
       return 0;
     } else {
       // 移动端导航栏索引：首页(0)、邀请(1)
       // 对应的分支索引：首页=0, 邀请=3
       if (location.startsWith('/invite')) return 1;
-      // Plans 和 Support 页面不在移动端底部导航栏中，返回 -1 表示不高亮任何项
-      if (location.startsWith('/plans') || location.startsWith('/support')) return -1;
+      // Plans 页面不在移动端底部导航栏中，返回 -1 表示不高亮任何项
+      if (location.startsWith('/plans')) return -1;
       return 0;
     }
   }
@@ -88,7 +89,6 @@ class AdaptiveShellLayout extends ConsumerWidget {
       // Plans 和 Support 页面不显示底部导航栏
       final location = GoRouterState.of(context).uri.path;
       final hideBottomNav = location.startsWith('/plans') ||
-          location.startsWith('/support') ||
           location.startsWith('/invite');
       
       return Scaffold(

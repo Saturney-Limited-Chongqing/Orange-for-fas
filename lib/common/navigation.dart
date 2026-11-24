@@ -3,8 +3,9 @@ import 'package:fl_clash/models/models.dart';
 // import 'package:fl_clash/views/views.dart';
 import 'package:fl_clash/xboard/features/payment/pages/plans.dart';
 import 'package:fl_clash/xboard/features/subscription/pages/xboard_home_page.dart';
-import 'package:fl_clash/xboard/features/online_support/pages/online_support_page.dart';
-import 'package:fl_clash/xboard/features/online_support/providers/chat_provider.dart';
+// 客服模块已注释
+// import 'package:fl_clash/xboard/features/online_support/pages/online_support_page.dart';
+// import 'package:fl_clash/xboard/features/online_support/providers/chat_provider.dart';
 import 'package:fl_clash/xboard/features/invite/pages/invite_page.dart';
 import 'package:fl_clash/xboard/features/shared/shared.dart';
 import 'package:flutter/material.dart';
@@ -48,16 +49,17 @@ class Navigation {
         ),
         modes: [NavigationItemMode.desktop],
       ),
-      const NavigationItem(
-        icon: Icon(Icons.support_agent),
-        label: PageLabel.onlineSupport,
-        view: OnlineSupportPage(
-          key: GlobalObjectKey(
-            PageLabel.onlineSupport,
-          ),
-        ),
-        modes: [NavigationItemMode.desktop], // 桌面端显示
-      ),
+      // 客服入口已注释
+      // const NavigationItem(
+      //   icon: Icon(Icons.support_agent),
+      //   label: PageLabel.onlineSupport,
+      //   view: OnlineSupportPage(
+      //     key: GlobalObjectKey(
+      //       PageLabel.onlineSupport,
+      //     ),
+      //   ),
+      //   modes: [NavigationItemMode.desktop], // 桌面端显示
+      // ),
       const NavigationItem(
         icon: Icon(Icons.people),
         label: PageLabel.invite,

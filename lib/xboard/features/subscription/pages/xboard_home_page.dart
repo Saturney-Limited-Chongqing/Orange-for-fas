@@ -130,21 +130,22 @@ class _XBoardHomePageState extends ConsumerState<XBoardHomePage>
           ? null
           : AppBar(
               automaticallyImplyLeading: false,
-              leadingWidth: 120,
-              leading: TextButton.icon(
-                icon: const Icon(Icons.support_agent, size: 20),
-                label: Text(appLocalizations.onlineSupport),
-                onPressed: () {
-                  // 移动端独有的按钮，使用 push 创建路由栈
-                  context.push('/support');
-                },
-                style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-              ),
+              // 客服入口已注释
+              // leadingWidth: 120,
+              // leading: TextButton.icon(
+              //   icon: const Icon(Icons.support_agent, size: 20),
+              //   label: Text(appLocalizations.onlineSupport),
+              //   onPressed: () {
+              //     // 移动端独有的按钮，使用 push 创建路由栈
+              //     context.push('/support');
+              //   },
+              //   style: TextButton.styleFrom(
+              //     padding:
+              //         const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              //     minimumSize: Size.zero,
+              //     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              //   ),
+              // ),
               actions: [
                 TextButton.icon(
                   icon: const Icon(Icons.card_giftcard, size: 20),

@@ -3,7 +3,7 @@ import 'package:fl_clash/xboard/features/subscription/pages/subscription_page.da
 import 'package:fl_clash/xboard/features/payment/pages/plans.dart';
 import 'package:fl_clash/xboard/features/payment/pages/plan_purchase_page.dart';
 import 'package:fl_clash/xboard/features/payment/pages/payment_gateway_page.dart';
-import 'package:fl_clash/xboard/features/online_support/pages/online_support_page.dart';
+// import 'package:fl_clash/xboard/features/online_support/pages/online_support_page.dart';
 import 'package:fl_clash/xboard/features/invite/pages/invite_page.dart';
 import 'package:fl_clash/xboard/features/auth/pages/login_page.dart';
 import 'package:fl_clash/xboard/domain/domain.dart';
@@ -49,18 +49,18 @@ final List<RouteBase> routes = [
           ],
         ),
         
-        // 在线客服分支
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/support',
-              name: 'support',
-              pageBuilder: (context, state) => const NoTransitionPage(
-                child: OnlineSupportPage(),
-              ),
-            ),
-          ],
-        ),
+        // 在线客服分支（已注释）
+        // StatefulShellBranch(
+        //   routes: [
+        //     GoRoute(
+        //       path: '/support',
+        //       name: 'support',
+        //       pageBuilder: (context, state) => const NoTransitionPage(
+        //         child: OnlineSupportPage(),
+        //       ),
+        //     ),
+        //   ],
+        // ),
       ],
     ),
 
